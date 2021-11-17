@@ -9,13 +9,23 @@ namespace H2S
 {
     public partial class Http2Socks : ServiceBase
     {
+        /// <summary>
+        /// HTTP listener
+        /// </summary>
         private HttpListener Server;
 
+        /// <summary>
+        /// NOOP
+        /// </summary>
         public Http2Socks()
         {
             InitializeComponent();
         }
 
+        /// <summary>
+        /// Starts the HTTP listener
+        /// </summary>
+        /// <param name="args">Arguments (ignored)</param>
         protected override void OnStart(string[] args)
         {
             lock (this)
@@ -30,6 +40,63 @@ namespace H2S
             }
         }
 
+        /// <summary>
+        /// Stops the HTTP listener
+        /// </summary>
+        protected override void OnStop()
+        {
+            lock (this)
+            {
+                if (Server != null)
+                {
+                    Server.Stop();
+                    Server.Dispose();
+                    Server = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Pauses the HTTP listener
+        /// </summary>
+        protected override void OnPause()
+        {
+            lock (this)
+            {
+                if (Server != null)
+                {
+                    Server.Stop();
+                }
+                else
+                {
+                    throw new InvalidOperationException("Cannot pause because service is not started");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Resumes the HTTP listener
+        /// </summary>
+        protected override void OnContinue()
+        {
+            lock (this)
+            {
+                if (Server != null)
+                {
+                    Server.Start();
+                }
+                else
+                {
+                    throw new InvalidOperationException("Cannot continue because service is not paused");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Callback for new connections
+        /// </summary>
+        /// <param name="Sender">HTTP listener</param>
+        /// <param name="Args">Connection arguments</param>
         private void Server_HttpHeaderComplete(object Sender, HttpHeaderEventArgs Args)
         {
             var Addr = Args.Client.RemoteEndPoint as IPEndPoint;
@@ -90,49 +157,6 @@ namespace H2S
             catch (Exception ex)
             {
                 Tools.LogEx("CAT failed", ex);
-            }
-        }
-
-        protected override void OnStop()
-        {
-            lock (this)
-            {
-                if (Server != null)
-                {
-                    Server.Stop();
-                    Server.Dispose();
-                    Server = null;
-                }
-            }
-        }
-
-        protected override void OnPause()
-        {
-            lock (this)
-            {
-                if (Server != null)
-                {
-                    Server.Stop();
-                }
-                else
-                {
-                    throw new InvalidOperationException("Cannot pause because service is not started");
-                }
-            }
-        }
-
-        protected override void OnContinue()
-        {
-            lock (this)
-            {
-                if (Server != null)
-                {
-                    Server.Start();
-                }
-                else
-                {
-                    throw new InvalidOperationException("Cannot continue because service is not paused");
-                }
             }
         }
     }

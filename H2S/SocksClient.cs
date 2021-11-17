@@ -6,8 +6,20 @@ using System.Text;
 
 namespace H2S
 {
+    /// <summary>
+    /// Provides SOCKS4 client functionality
+    /// </summary>
     public static class SocksClient
     {
+        /// <summary>
+        /// Opens a SOCKS4 tunnel
+        /// </summary>
+        /// <param name="ServerAddress">SOCKS server address</param>
+        /// <param name="Ident">Ident string (can usually be freely chosen)</param>
+        /// <param name="Host">Host to tunnel to</param>
+        /// <param name="Port">Port to tunnel to</param>
+        /// <param name="Timeout">Connection timeout in milliseconds</param>
+        /// <returns>Socket</returns>
         public static Socket Open(IPEndPoint ServerAddress, string Ident, string Host, int Port, int Timeout = Tools.DEFAULT_TIMEOUT)
         {
             if (ServerAddress is null)

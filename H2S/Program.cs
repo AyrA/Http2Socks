@@ -15,6 +15,7 @@ namespace H2S
         static int Main(string[] Args)
         {
 #if DEBUG
+            //In debug mode, launch the service manually
             using (var Service = new Http2Socks())
             {
                 Console.WriteLine("Starting service as console application...");
@@ -26,8 +27,10 @@ namespace H2S
                 Console.WriteLine("Stopping service...");
                 StopFunc.Invoke(Service, null);
                 Console.WriteLine("Service stopped. Press any key to exit");
+                Console.ReadKey(true);
             }
 #else
+            //In release mode, use the intended service control mechanism
             ServiceBase[] ServicesToRun;
             ServicesToRun = new ServiceBase[]
             {
