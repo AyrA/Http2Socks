@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 #if !DEBUG
 using System.ServiceProcess;
 #else
@@ -14,6 +15,18 @@ namespace H2S
         /// </summary>
         static int Main(string[] Args)
         {
+            if (!File.Exists(Tools.ConfigFile))
+            {
+                var C = Tools.DefaultConfig();
+                C.FileName = Tools.ConfigFile;
+                C.Write();
+            }
+            else
+            {
+                var C = new Configuration(Tools.ConfigFile);
+                Tools.ValidateConfig(C);
+            }
+
 #if DEBUG
             //In debug mode, launch the service manually
             using (var Service = new Http2Socks())

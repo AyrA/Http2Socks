@@ -15,6 +15,12 @@ namespace H2S
         private HttpListener Server;
 
         /// <summary>
+        /// Holds the configuration.
+        /// Loaded once <see cref="OnStart(string[])"/> is called.
+        /// </summary>
+        private Configuration C;
+
+        /// <summary>
         /// NOOP
         /// </summary>
         public Http2Socks()
@@ -34,7 +40,9 @@ namespace H2S
                 {
                     throw new InvalidOperationException("Service start function called multiple times");
                 }
-                Server = new HttpListener(new IPEndPoint(IPAddress.Loopback, 12243));
+                C = new Configuration(Tools.ConfigFile);
+                Tools.ValidateConfig(C);
+                Server = new HttpListener(new IPEndPoint(IPAddress.Parse(C.Get("HTTP", "IP")), int.Parse(C.Get("HTTP", "Port"))));
                 Server.HttpHeaderComplete += Server_HttpHeaderComplete;
                 Server.Start();
             }
@@ -108,19 +116,20 @@ namespace H2S
                 Args.Client.Dispose();
                 return;
             }
-            var M = Regex.Match(HostHeader[0], @"^(\w+\.onion)\.local(:\d+)?$", RegexOptions.IgnoreCase);
-            if (!M.Success)
+            var Suffix = Regex.Escape(C.Get("DNS", "Suffix"));
+            var M = HostHeader[0].Match(@"^(\w+\.onion)\." + Suffix + @"(:\d+)?$", RegexOptions.IgnoreCase);
+            if (M == null)
             {
                 Tools.Log(nameof(Http2Socks), $"Rejected host (disallowed or format error): {HostHeader[0]}");
                 HttpActions.Forbidden(Args.Client, $"User not allowed to connect to {HostHeader[0]}");
                 Args.Client.Dispose();
                 return;
             }
-            var Host = M.Groups[1].Value;
+            var Host = M[1];
             var Port = 80;
-            if (M.Groups.Count > 2 && M.Groups[2].Value.Length > 1)
+            if (M.Length > 2 && M[2].Length > 1)
             {
-                if (!int.TryParse(M.Groups[2].Value.Substring(1), out Port))
+                if (!int.TryParse(M[2].Substring(1), out Port))
                 {
                     Tools.Log(nameof(Http2Socks), $"Rejected host (invalid port): {HostHeader[0]}");
                     HttpActions.BadRequest(Args.Client, "Invalid \"Host\" header format");
@@ -140,7 +149,8 @@ namespace H2S
             Socket RemoteConnection;
             try
             {
-                RemoteConnection = SocksClient.Open(new IPEndPoint(IPAddress.Loopback, 9050), Addr.Address.ToString(), Host, Port);
+                var IPE = new IPEndPoint(IPAddress.Parse(C.Get("TOR", "IP")), int.Parse(C.Get("TOR", "Port")));
+                RemoteConnection = SocksClient.Open(IPE, Addr.Address.ToString(), Host, Port, int.Parse(C.Get("TOR", "Timeout")));
                 RemoteConnection.Send(Encoding.UTF8.GetBytes(Args.CombineHeaders() + "\r\n\r\n"));
             }
             catch (Exception ex)

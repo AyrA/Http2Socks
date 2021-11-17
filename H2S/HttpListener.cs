@@ -282,7 +282,8 @@ namespace H2S
         {
             Thread T = new Thread(delegate ()
             {
-                var Matcher = new Regex(@"^([^:]+):\s*(.*)$");
+                //matches "Name: Value" format with the space being optional
+                const string Matcher = @"^([^:]+):\s*(.*)$";
                 var EventArgs = new HttpHeaderEventArgs(client);
                 var EP = client.RemoteEndPoint as IPEndPoint;
                 string Line = null;
@@ -303,10 +304,10 @@ namespace H2S
                     }
                     else if (!string.IsNullOrEmpty(Line))
                     {
-                        var M = Matcher.Match(Line);
-                        if (M.Success)
+                        var M = Line.Match(Matcher);
+                        if (M != null)
                         {
-                            EventArgs.AddHeader(M.Groups[1].Value, M.Groups[2].Value);
+                            EventArgs.AddHeader(M[1], M[2]);
                         }
                         else
                         {

@@ -24,6 +24,13 @@ namespace H2S
         /// </remarks>
         public const int DEFAULT_TIMEOUT = 5000;
 
+        public static readonly string ConfigFile;
+
+        static Tools()
+        {
+            ConfigFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(Environment.GetCommandLineArgs()[0])), "config.ini");
+        }
+
         /// <summary>
         /// Connects the socket to the supplied remote destination for at most "<paramref name="Timeout"/>" milliseconds.
         /// </summary>
@@ -154,6 +161,57 @@ namespace H2S
         {
             Console.WriteLine("[{0}]: {1}", Component, Message);
         }
+
+        /// <summary>
+        /// Gets the default configuration for this application
+        /// </summary>
+        /// <returns>Configuration with defaults</returns>
+        public static Configuration DefaultConfig()
+        {
+            var C = new Configuration();
+            C.Set("TOR", "IP", IPAddress.Loopback);
+            C.Set("TOR", "Port", 9050);
+            C.Set("TOR", "Timeout", DEFAULT_TIMEOUT);
+            C.Set("HTTP", "IP", IPAddress.Loopback);
+            C.Set("HTTP", "Port", 12243);
+            C.Set("DNS", "Suffix", "local");
+            return C;
+        }
+
+        public static void ValidateConfig(Configuration C)
+        {
+            if (C is null)
+            {
+                throw new ArgumentNullException(nameof(C));
+            }
+            if (!IPAddress.TryParse(C.Get("TOR", "IP"), out _))
+            {
+                throw new InvalidDataException("TOR.IP value is invalid");
+            }
+            if (!int.TryParse(C.Get("TOR", "Port"), out int TorPort) || TorPort < IPEndPoint.MinPort || TorPort > IPEndPoint.MaxPort)
+            {
+                throw new InvalidDataException("TOR.Port value is invalid");
+            }
+            if (!int.TryParse(C.Get("TOR", "Timeout"), out int TorTimeout) || TorTimeout < 1)
+            {
+                throw new InvalidDataException("TOR.Timeout value is invalid");
+            }
+
+
+            if (!IPAddress.TryParse(C.Get("HTTP", "IP"), out _))
+            {
+                throw new InvalidDataException("HTTP.IP value is invalid");
+            }
+            if (!int.TryParse(C.Get("HTTP", "Port"), out int HttpPort) || HttpPort < IPEndPoint.MinPort || HttpPort > IPEndPoint.MaxPort)
+            {
+                throw new InvalidDataException("HTTP.Port value is invalid");
+            }
+
+            if (string.IsNullOrEmpty(C.Get("DNS", "Suffix")))
+            {
+                throw new InvalidDataException("DNS.Suffix value is missing");
+            }
+        }
     }
 
     /// <summary>
@@ -276,6 +334,16 @@ namespace H2S
         /// <returns>Value, or default if setting or section is missing</returns>
         public string Get(string Section, string Setting, string Default = null)
         {
+            if (Section is null)
+            {
+                throw new ArgumentNullException(nameof(Section));
+            }
+
+            if (Setting is null)
+            {
+                throw new ArgumentNullException(nameof(Setting));
+            }
+
             if (Settings.ContainsKey(Section))
             {
                 var S = Settings[Section];
@@ -296,11 +364,42 @@ namespace H2S
         /// <param name="Value">Value</param>
         public void Set(string Section, string Setting, string Value)
         {
+            if (Section is null)
+            {
+                throw new ArgumentNullException(nameof(Section));
+            }
+
+            if (Setting is null)
+            {
+                throw new ArgumentNullException(nameof(Setting));
+            }
+
+            if (Value is null)
+            {
+                throw new ArgumentNullException(nameof(Value));
+            }
+
             if (!Settings.ContainsKey(Section))
             {
                 Settings.Add(Section, new Dictionary<string, string>());
             }
             Settings[Section][Setting] = Value;
+        }
+
+        /// <summary>
+        /// Sets a setting to the given value.
+        /// Creates section and setting if needed
+        /// </summary>
+        /// <param name="Section">Section name</param>
+        /// <param name="Setting">Setting name</param>
+        /// <param name="Value">Value</param>
+        /// <remarks>
+        /// This internally calls .ToString() on the supplied value.
+        /// Implement .ToString() in a way that makes your value serializable.
+        /// </remarks>
+        public void Set(string Section, string Setting, object Value)
+        {
+            Set(Section, Setting, Value?.ToString());
         }
 
         /// <summary>
@@ -310,6 +409,11 @@ namespace H2S
         /// <returns>true if deleted, false if not found</returns>
         public bool Delete(string Section)
         {
+            if (Section is null)
+            {
+                throw new ArgumentNullException(nameof(Section));
+            }
+
             return Settings.Remove(Section);
         }
 
@@ -321,6 +425,16 @@ namespace H2S
         /// <returns>true if deleted, false if not found</returns>
         public bool Delete(string Section, string Setting)
         {
+            if (Section is null)
+            {
+                throw new ArgumentNullException(nameof(Section));
+            }
+
+            if (Setting is null)
+            {
+                throw new ArgumentNullException(nameof(Setting));
+            }
+
             if (Settings.ContainsKey(Section))
             {
                 return Settings[Section].Remove(Setting);
@@ -344,6 +458,11 @@ namespace H2S
         /// <returns>Setting names</returns>
         public string[] List(string Section)
         {
+            if (Section is null)
+            {
+                throw new ArgumentNullException(nameof(Section));
+            }
+
             if (Settings.ContainsKey(Section))
             {
                 return Settings[Section].Select(m => m.Key).ToArray();
@@ -358,6 +477,11 @@ namespace H2S
         /// <param name="Section">Section name</param>
         public void Empty(string Section)
         {
+            if (Section is null)
+            {
+                throw new ArgumentNullException(nameof(Section));
+            }
+
             Settings[Section] = new Dictionary<string, string>();
         }
     }
