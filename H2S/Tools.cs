@@ -272,7 +272,7 @@ namespace H2S
                 {
                     continue;
                 }
-                var CheckSection = Line.Match(@"^\s*(\[[^\]]+\])\s*$");
+                var CheckSection = Line.Match(@"^\s*\[([^\]]+)\]\s*$");
                 if (CheckSection != null)
                 {
                     Section = new Dictionary<string, string>();

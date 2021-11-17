@@ -17,12 +17,14 @@ namespace H2S
         {
             if (!File.Exists(Tools.ConfigFile))
             {
+                Tools.Log(nameof(Program), "Config does not exist. Creating defaults");
                 var C = Tools.DefaultConfig();
                 C.FileName = Tools.ConfigFile;
                 C.Write();
             }
             else
             {
+                Tools.Log(nameof(Program), "Loading existing configuration");
                 var C = new Configuration(Tools.ConfigFile);
                 Tools.ValidateConfig(C);
             }
