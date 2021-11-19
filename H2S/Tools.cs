@@ -4,7 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace H2S
@@ -24,11 +27,13 @@ namespace H2S
         /// </remarks>
         public const int DEFAULT_TIMEOUT = 5000;
 
+        public static readonly string AppDirectory;
         public static readonly string ConfigFile;
 
         static Tools()
         {
-            ConfigFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(Environment.GetCommandLineArgs()[0])), "config.ini");
+            AppDirectory = Path.GetDirectoryName(Path.GetFullPath(Environment.GetCommandLineArgs()[0]));
+            ConfigFile = Path.Combine(AppDirectory, "config.ini");
         }
 
         /// <summary>
@@ -163,18 +168,46 @@ namespace H2S
         }
 
         /// <summary>
+        /// Terminates the process immediately and writes the given exception to the event log
+        /// </summary>
+        /// <param name="Message">Message</param>
+        /// <param name="ex">Exception</param>
+        /// <remarks>In debug mode will lock up instead of terminate</remarks>
+        public static void ExitEx(string Message, Exception ex)
+        {
+            LogEx(Message, ex);
+            Console.ForegroundColor = ConsoleColor.Black;
+            Console.BackgroundColor = ConsoleColor.Red;
+            Console.Write("=== APPLICATION HALTED BY EXCEPTION ===".PadRight(Console.BufferWidth));
+            Console.ResetColor();
+#if DEBUG
+            Thread.CurrentThread.Join();
+#else
+            Environment.FailFast(Message, ex);
+#endif
+        }
+
+        /// <summary>
         /// Gets the default configuration for this application
         /// </summary>
         /// <returns>Configuration with defaults</returns>
         public static Configuration DefaultConfig()
         {
             var C = new Configuration();
+            //Tor backend
             C.Set("TOR", "IP", IPAddress.Loopback);
             C.Set("TOR", "Port", 9050);
             C.Set("TOR", "Timeout", DEFAULT_TIMEOUT);
+            //HTTP server
             C.Set("HTTP", "IP", IPAddress.Loopback);
             C.Set("HTTP", "Port", 12243);
+            //DNS configuration
             C.Set("DNS", "Suffix", "local");
+            C.Set("DNS", "Blacklist", Path.Combine(AppDirectory, "blacklist.ini"));
+
+            C.Set("Control", "IP", IPAddress.Loopback);
+            C.Set("Control", "Port", 12244);
+            C.Set("Control", "Cookie", Path.Combine(AppDirectory, "cookie.txt"));
             return C;
         }
 
@@ -188,7 +221,7 @@ namespace H2S
             {
                 throw new InvalidDataException("TOR.IP value is invalid");
             }
-            if (!int.TryParse(C.Get("TOR", "Port"), out int TorPort) || TorPort < IPEndPoint.MinPort || TorPort > IPEndPoint.MaxPort)
+            if (!IsPort(C.Get("TOR", "Port")))
             {
                 throw new InvalidDataException("TOR.Port value is invalid");
             }
@@ -197,12 +230,11 @@ namespace H2S
                 throw new InvalidDataException("TOR.Timeout value is invalid");
             }
 
-
             if (!IPAddress.TryParse(C.Get("HTTP", "IP"), out _))
             {
                 throw new InvalidDataException("HTTP.IP value is invalid");
             }
-            if (!int.TryParse(C.Get("HTTP", "Port"), out int HttpPort) || HttpPort < IPEndPoint.MinPort || HttpPort > IPEndPoint.MaxPort)
+            if (!IsPort(C.Get("HTTP", "Port")))
             {
                 throw new InvalidDataException("HTTP.Port value is invalid");
             }
@@ -211,278 +243,165 @@ namespace H2S
             {
                 throw new InvalidDataException("DNS.Suffix value is missing");
             }
-        }
-    }
-
-    /// <summary>
-    /// Very simple INI configuration parser and writer
-    /// </summary>
-    /// <remarks>This will not preserve empty lines or comments when writing</remarks>
-    public class Configuration
-    {
-        /// <summary>
-        /// Gets the config file name
-        /// </summary>
-        public string FileName { get; set; }
-
-        /// <summary>
-        /// Holds sections with settings
-        /// </summary>
-        private Dictionary<string, Dictionary<string, string>> Settings;
-
-        /// <summary>
-        /// Loads configuration from the given file
-        /// </summary>
-        /// <param name="FileName"></param>
-        public Configuration(string FileName)
-        {
-            if (FileName is null)
+            if (C.List().Contains("Control"))
             {
-                throw new ArgumentNullException(nameof(FileName));
-            }
-            this.FileName = FileName;
-
-            Reload();
-        }
-
-        /// <summary>
-        /// Creates an empty INI container
-        /// </summary>
-        public Configuration()
-        {
-            Settings = new Dictionary<string, Dictionary<string, string>>();
-        }
-
-        /// <summary>
-        /// Reloads settings from the file.
-        /// Discards any changes in memory
-        /// </summary>
-        public void Reload()
-        {
-            if (string.IsNullOrEmpty(FileName))
-            {
-                throw new InvalidOperationException(nameof(FileName) + " has not been set yet.");
-            }
-            Settings = new Dictionary<string, Dictionary<string, string>>();
-            Dictionary<string, string> Section = null;
-            foreach (var Line in File.ReadAllLines(FileName))
-            {
-                //Skip empty lines and comments
-                if (string.IsNullOrWhiteSpace(Line) || Line.Trim().StartsWith(";"))
+                if (!IPAddress.TryParse(C.Get("Control", "IP"), out _))
                 {
-                    continue;
+                    throw new InvalidDataException("Control.IP value is invalid");
                 }
-                var CheckSection = Line.Match(@"^\s*\[([^\]]+)\]\s*$");
-                if (CheckSection != null)
+                if (!IsPort(C.Get("Control", "Port")))
                 {
-                    Section = new Dictionary<string, string>();
-                    Settings[CheckSection[1]] = Section;
+                    throw new InvalidDataException("Control.Port value is invalid");
                 }
-                else
+                if (C.Get("Control", "Password") != null)
                 {
-                    var SettingMatch = Line.Match("^([^=]+)=(.*)$");
-                    if (SettingMatch != null)
+                    var PW = C.Get("Control", "Password");
+                    if (string.IsNullOrWhiteSpace(PW))
                     {
-                        var K = SettingMatch[1];
-                        var V = SettingMatch[2];
-                        if (Section == null)
-                        {
-                            throw new InvalidDataException($"Found setting before first section: {Line}");
-                        }
-                        if (Section.ContainsKey(K))
-                        {
-                            throw new InvalidDataException($"Duplicate setting name: {Line}");
-                        }
-                        Section[K] = V;
+                        throw new InvalidDataException("Control.Password if present cannot be empty or whitespace only");
                     }
-                    else
+                    if (!IsHashedPassword(PW))
                     {
-                        throw new InvalidDataException($"Line is neither setting nor section nor comment: {Line}");
+                        throw new InvalidDataException("Control.Password is not hashed");
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Writes current settings to file
-        /// </summary>
-        public void Write()
-        {
-            if (string.IsNullOrEmpty(FileName))
-            {
-                throw new InvalidOperationException(nameof(FileName) + " has not been set yet.");
-            }
-            var Lines = new List<string>();
-            Lines.Add($";Last modified on {DateTime.UtcNow} UTC");
-            foreach (var KV in Settings)
-            {
-                Lines.Add($"[{KV.Key}]");
-                foreach (var Setting in KV.Value)
+                else if (string.IsNullOrWhiteSpace(C.Get("Control", "Cookie")))
                 {
-                    Lines.Add($"{Setting.Key}={Setting.Value}");
+                    throw new InvalidDataException("Control.Cookie must be set if Control.Password is absent");
                 }
             }
-            File.WriteAllLines(FileName, Lines);
         }
 
-        /// <summary>
-        /// Gets the specified value from the INI settings
-        /// </summary>
-        /// <param name="Section">Section name</param>
-        /// <param name="Setting">Setting name</param>
-        /// <param name="Default">Default value</param>
-        /// <returns>Value, or default if setting or section is missing</returns>
-        public string Get(string Section, string Setting, string Default = null)
+        public static bool IsHashedPassword(string Data)
         {
-            if (Section is null)
+            if (Data == null)
             {
-                throw new ArgumentNullException(nameof(Section));
+                return false;
             }
-
-            if (Setting is null)
-            {
-                throw new ArgumentNullException(nameof(Setting));
-            }
-
-            if (Settings.ContainsKey(Section))
-            {
-                var S = Settings[Section];
-                if (S.ContainsKey(Setting))
-                {
-                    return S[Setting];
-                }
-            }
-            return Default;
+            return Data.IsMatch("^ENC:[^:]+:.+$");
         }
 
-        /// <summary>
-        /// Sets a setting to the given value.
-        /// Creates section and setting if needed
-        /// </summary>
-        /// <param name="Section">Section name</param>
-        /// <param name="Setting">Setting name</param>
-        /// <param name="Value">Value</param>
-        public void Set(string Section, string Setting, string Value)
+        public static bool HashControlPassword(Configuration C)
         {
-            if (Section is null)
+            var Salt = GetSalt(18);
+            var PW = C.Get("Control", "Password");
+            if (PW == null || IsHashedPassword(PW))
             {
-                throw new ArgumentNullException(nameof(Section));
+                return false;
             }
-
-            if (Setting is null)
-            {
-                throw new ArgumentNullException(nameof(Setting));
-            }
-
-            if (Value is null)
-            {
-                throw new ArgumentNullException(nameof(Value));
-            }
-
-            if (!Settings.ContainsKey(Section))
-            {
-                Settings.Add(Section, new Dictionary<string, string>());
-            }
-            Settings[Section][Setting] = Value;
+            PW = "ENC:" + Convert.ToBase64String(Salt) + ":" + HashPassword(Salt, PW);
+            C.Set("Control", "Password", PW);
+            return true;
         }
 
-        /// <summary>
-        /// Sets a setting to the given value.
-        /// Creates section and setting if needed
-        /// </summary>
-        /// <param name="Section">Section name</param>
-        /// <param name="Setting">Setting name</param>
-        /// <param name="Value">Value</param>
-        /// <remarks>
-        /// This internally calls .ToString() on the supplied value.
-        /// Implement .ToString() in a way that makes your value serializable.
-        /// </remarks>
-        public void Set(string Section, string Setting, object Value)
+        private static bool IsPort(string S)
         {
-            Set(Section, Setting, Value?.ToString());
+            return int.TryParse(S, out int P) && P > IPEndPoint.MinPort && P < IPEndPoint.MaxPort;
         }
 
-        /// <summary>
-        /// Deletes an entire section
-        /// </summary>
-        /// <param name="Section">Section name</param>
-        /// <returns>true if deleted, false if not found</returns>
-        public bool Delete(string Section)
+        public static byte[] GetSalt(int Count)
         {
-            if (Section is null)
+            var b = new byte[Count];
+            using (var RNG = RandomNumberGenerator.Create())
             {
-                throw new ArgumentNullException(nameof(Section));
+                RNG.GetBytes(b);
             }
-
-            return Settings.Remove(Section);
+            return b;
         }
 
-        /// <summary>
-        /// Deletes a setting
-        /// </summary>
-        /// <param name="Section">Section name</param>
-        /// <param name="Setting">Setting name</param>
-        /// <returns>true if deleted, false if not found</returns>
-        public bool Delete(string Section, string Setting)
+        public static bool CheckPassword(string Password, string HashLine)
         {
-            if (Section is null)
+            if (Password is null)
             {
-                throw new ArgumentNullException(nameof(Section));
+                throw new ArgumentNullException(nameof(Password));
             }
 
-            if (Setting is null)
+            if (HashLine is null)
             {
-                throw new ArgumentNullException(nameof(Setting));
+                throw new ArgumentNullException(nameof(HashLine));
             }
 
-            if (Settings.ContainsKey(Section))
+            var M = HashLine.Match(@"^ENC:([^:]+):(.+)$");
+            if (M != null)
             {
-                return Settings[Section].Remove(Setting);
+                return HashPassword(Convert.FromBase64String(M[1]), Password) == M[2];
             }
             return false;
         }
 
-        /// <summary>
-        /// Lists all section names
-        /// </summary>
-        /// <returns>Section names</returns>
-        public string[] List()
+        public static string HashPassword(byte[] Salt, string Password)
         {
-            return Settings.Select(m => m.Key).ToArray();
-        }
-
-        /// <summary>
-        /// Lists all settings of a section
-        /// </summary>
-        /// <param name="Section">Section name</param>
-        /// <returns>Setting names</returns>
-        public string[] List(string Section)
-        {
-            if (Section is null)
+            if (Salt is null)
             {
-                throw new ArgumentNullException(nameof(Section));
+                throw new ArgumentNullException(nameof(Salt));
             }
 
-            if (Settings.ContainsKey(Section))
+            if (Password is null)
             {
-                return Settings[Section].Select(m => m.Key).ToArray();
+                throw new ArgumentNullException(nameof(Password));
+            }
+
+            using (var hasher = new HMACSHA256(Salt))
+            {
+                return Convert.ToBase64String(hasher.ComputeHash(Encoding.UTF8.GetBytes(Password)));
+            }
+        }
+
+        public static string NormalizeOnion(string Domain)
+        {
+            if (string.IsNullOrEmpty(Domain))
+            {
+                return null;
+            }
+            var M = Domain.Match(@"^(?:.*\.)?([a-z2-7]{56})(?:\.onion)?$", RegexOptions.IgnoreCase);
+            if (M != null)
+            {
+                return M[1].ToLower() + ".onion";
             }
             return null;
         }
 
-        /// <summary>
-        /// Empties the given section.
-        /// Creates an empty section if it doesn't exists
-        /// </summary>
-        /// <param name="Section">Section name</param>
-        public void Empty(string Section)
+        public static string UrlDecode(string S)
         {
-            if (Section is null)
+            if (string.IsNullOrEmpty(S))
             {
-                throw new ArgumentNullException(nameof(Section));
+                return S;
+            }
+            return Uri.UnescapeDataString(S.Replace("+", " "));
+        }
+
+        public static string UrlEncode(string S)
+        {
+            if (string.IsNullOrEmpty(S))
+            {
+                return S;
+            }
+            return Uri.EscapeDataString(S).Replace("%20", "+");
+        }
+
+        public static BlacklistEntry[] GetBlacklistEntries(string FileName)
+        {
+            if (string.IsNullOrWhiteSpace(FileName))
+            {
+                throw new ArgumentException($"'{nameof(FileName)}' cannot be null or whitespace.", nameof(FileName));
             }
 
-            Settings[Section] = new Dictionary<string, string>();
+            var C = new Configuration(FileName);
+            return C.List().Select(m => BlacklistEntry.FromConfig(C, m)).ToArray();
+        }
+
+        public static Configuration SaveBlacklistEntries(IEnumerable<BlacklistEntry> Entries)
+        {
+            if (Entries is null)
+            {
+                throw new ArgumentNullException(nameof(Entries));
+            }
+            var C = new Configuration();
+            foreach (var E in Entries)
+            {
+                E.Save(C);
+            }
+            return C;
         }
     }
 }

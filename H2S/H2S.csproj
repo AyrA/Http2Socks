@@ -47,6 +47,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BlacklistEntry.cs" />
+    <Compile Include="Configuration.cs" />
+    <Compile Include="ControlPort.cs" />
     <Compile Include="Http2Socks.cs">
       <SubType>Component</SubType>
     </Compile>

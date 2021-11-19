@@ -24,9 +24,7 @@ namespace H2S
             }
             else
             {
-                Tools.Log(nameof(Program), "Loading existing configuration");
-                var C = new Configuration(Tools.ConfigFile);
-                Tools.ValidateConfig(C);
+                Tools.Log(nameof(Program), "Using existing configuration");
             }
 
 #if DEBUG
