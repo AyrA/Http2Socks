@@ -275,17 +275,17 @@ namespace H2S
         {
             foreach (var Section in Settings)
             {
-                if (!IsValidIniString(Section.Key))
+                if (!IsValidIniString(Section.Key, false))
                 {
                     return false;
                 }
                 foreach (var Setting in Section.Value)
                 {
-                    if (!IsValidIniString(Setting.Key) || Setting.Key.Contains("="))
+                    if (!IsValidIniString(Setting.Key, true))
                     {
                         return false;
                     }
-                    if (!IsValidIniString(Setting.Value))
+                    if (!IsValidIniString(Setting.Value, false))
                     {
                         return false;
                     }
@@ -294,11 +294,30 @@ namespace H2S
             return true;
         }
 
-        private static bool IsValidIniString(string s)
+        /// <summary>
+        /// Checks if the supplied value is a valid string for an INI file
+        /// </summary>
+        /// <param name="IniValue">String to check</param>
+        /// <param name="IsSettingName">true, if this string is a setting name, false otherwise</param>
+        /// <returns>true if valid INI string</returns>
+        private static bool IsValidIniString(string IniValue, bool IsSettingName)
         {
-            return string.IsNullOrEmpty(s) || s.IsMatch(@"^[^\x0A\x0D]*$");
+            if (string.IsNullOrEmpty(IniValue))
+            {
+                return true;
+            }
+            if (!IniValue.IsMatch(@"^[^\x0A\x0D]*$"))
+            {
+                return false;
+            }
+
+            return !IsSettingName || !IniValue.Contains("=");
         }
 
+        /// <summary>
+        /// Gets the contents of this instance as a complete INI file.
+        /// </summary>
+        /// <returns>INI string</returns>
         public override string ToString()
         {
             using (var MS = new MemoryStream())
@@ -308,14 +327,29 @@ namespace H2S
             }
         }
 
+        /// <summary>
+        /// Write the contents of this instance to the given stream
+        /// </summary>
+        /// <param name="S">Stream</param>
+        /// <remarks>The stream is not closed after writing</remarks>
         public void WriteToStream(Stream S)
         {
+            if (S is null)
+            {
+                throw new ArgumentNullException(nameof(S));
+            }
+            if (!S.CanWrite)
+            {
+                throw new ArgumentException("The supplied stream is not marked as writable.");
+            }
+
             ValidateConfig();
             using (var SW = new StreamWriter(S, new UTF8Encoding(false, false), 1024, true))
             {
-                SW.WriteLine($";Last modified on {DateTime.UtcNow} UTC");
+                SW.WriteLine($";Last modified at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
                 foreach (var KV in Settings)
                 {
+                    SW.WriteLine();
                     SW.WriteLine($"[{KV.Key}]");
                     foreach (var Setting in KV.Value)
                     {
