@@ -62,6 +62,7 @@ namespace H2S
                 C = new Configuration(Tools.ConfigFile);
                 if (Tools.HashControlPassword(C))
                 {
+                    Tools.Log(nameof(Http2Socks), "INI password was hashed");
                     try
                     {
                         C.Write();
@@ -203,16 +204,17 @@ namespace H2S
                     {
                         if (Args.Arguments.Length == 5)
                         {
-                            var BL = new BlacklistEntry()
-                            {
-                                Domain = Args.Arguments[0],
-                                Name = Tools.UrlDecode(Args.Arguments[1]),
-                                InternalNotes = Tools.UrlDecode(Args.Arguments[2]),
-                                Type = (BlacklistType)int.Parse(Args.Arguments[3]),
-                                URL = Args.Arguments[4]
-                            };
+                            BlacklistEntry BL;
                             try
                             {
+                                BL = new BlacklistEntry()
+                                {
+                                    Domain = Args.Arguments[0],
+                                    Name = Tools.UrlDecode(Args.Arguments[1]),
+                                    InternalNotes = Tools.UrlDecode(Args.Arguments[2]),
+                                    Type = (BlacklistType)int.Parse(Args.Arguments[3]),
+                                    URL = Args.Arguments[4]
+                                };
                                 BL.Validate();
                             }
                             catch (Exception ex)
@@ -287,9 +289,13 @@ namespace H2S
             {
                 Args.Success = Tools.CheckPassword(Args.AuthData, PW);
             }
-            else if (CookiePassword != null)
+            if (!Args.Success && CookiePassword != null)
             {
                 Args.Success = Args.AuthData == CookiePassword;
+            }
+            if (!Args.Success)
+            {
+                Tools.Log(nameof(Http2Socks), "Control connection authentication failure");
             }
         }
 
@@ -441,6 +447,18 @@ namespace H2S
         /// <param name="e">Blacklist entry that matched the request</param>
         private void BlacklistRequest(Socket client, BlacklistEntry e)
         {
+            if (client is null)
+            {
+                throw new ArgumentNullException(nameof(client));
+            }
+
+            if (e is null)
+            {
+                throw new ArgumentNullException(nameof(e));
+            }
+
+            Tools.Log(nameof(Http2Socks), $"Rejecting request to {e.Domain}");
+
             var DisplayName = string.IsNullOrEmpty(e.Name) ? e.Domain : $"\"{e.Name}\" ({e.Domain})";
             var Who = e.Type == BlacklistType.Forbidden ? "The owner of this service" : "A legal entity";
             var SB = new StringBuilder($"<p>{Who} has blocked access to {HttpActions.HtmlEncode(DisplayName)}.</p>");
