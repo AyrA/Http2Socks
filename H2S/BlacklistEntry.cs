@@ -2,14 +2,35 @@
 
 namespace H2S
 {
+    /// <summary>
+    /// Represents an entry in the blacklist file
+    /// </summary>
     public class BlacklistEntry
     {
+        /// <summary>
+        /// Blocked onion domain
+        /// </summary>
         public string Domain { get; set; }
+        /// <summary>
+        /// Name of the onion service (optional)
+        /// </summary>
         public string Name { get; set; }
+        /// <summary>
+        /// Internal notes (optional)
+        /// </summary>
         public string InternalNotes { get; set; }
+        /// <summary>
+        /// Blacklist reason code
+        /// </summary>
         public BlacklistType Type { get; set; }
+        /// <summary>
+        /// URL with info about why this is blocked (optional)
+        /// </summary>
         public string URL { get; set; }
 
+        /// <summary>
+        /// Validates all properties of this instance
+        /// </summary>
         public void Validate()
         {
             var Temp = Tools.NormalizeOnion(Domain);
@@ -52,6 +73,10 @@ namespace H2S
             Domain = Temp;
         }
 
+        /// <summary>
+        /// Save the values to the given configuration file
+        /// </summary>
+        /// <param name="C">Configuration file</param>
         public void Save(Configuration C)
         {
             Validate();
@@ -71,6 +96,12 @@ namespace H2S
             }
         }
 
+        /// <summary>
+        /// Reads and fills an instance from the given configuration file
+        /// </summary>
+        /// <param name="C">Configuration file</param>
+        /// <param name="SectionName">Section name to read</param>
+        /// <returns>Instance</returns>
         public static BlacklistEntry FromConfig(Configuration C, string SectionName)
         {
             if (Tools.NormalizeOnion(SectionName) == null)
@@ -90,8 +121,17 @@ namespace H2S
         }
     }
 
+    /// <summary>
+    /// Block reasons
+    /// </summary>
+    /// <remarks>
+    /// Currently, the codes specify the HTTP response code but this is not guaranteed to always be like this
+    /// </remarks>
     public enum BlacklistType : int
     {
+        /// <summary>
+        /// Generic "Access denied" message
+        /// </summary>
         Forbidden = 403,
         /// <summary>
         /// Unavailable For Legal Reasons

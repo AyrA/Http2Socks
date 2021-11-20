@@ -115,6 +115,13 @@ namespace H2S
                 .Replace("\"", "&quot;");
         }
 
+        /// <summary>
+        /// Adds HTML framework around the supplied body value
+        /// </summary>
+        /// <param name="Code">HTTP code</param>
+        /// <param name="CodeType">HTTP code description</param>
+        /// <param name="Body">Body data</param>
+        /// <returns></returns>
         private static string FormatBody(int Code, string CodeType, string Body)
         {
             return "<!DOCTYPE html>" +

@@ -149,12 +149,17 @@ namespace H2S
             {
                 throw new ArgumentNullException(nameof(ex));
             }
-
+            Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine("== Begin Error report ==");
             Console.Error.WriteLine(Message);
+            Console.ForegroundColor = ConsoleColor.Yellow;
             Console.Error.WriteLine("Type: {0}", ex.GetType());
             Console.Error.WriteLine("Desc: {0}", ex.Message);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Error.WriteLine("Where: {0}", ex.StackTrace);
+            Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine("== End Error report ==");
+            Console.ResetColor();
         }
 
         /// <summary>

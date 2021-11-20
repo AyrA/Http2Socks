@@ -21,8 +21,15 @@ namespace H2S
         /// </summary>
         private ControlPort Control;
 
+        /// <summary>
+        /// Holds the password stored in the cookie file
+        /// </summary>
+        /// <remarks>Set to random value every time the service is started</remarks>
         private string CookiePassword;
 
+        /// <summary>
+        /// Holds a list of all blacklisted domains
+        /// </summary>
         private List<BlacklistEntry> Blacklist;
 
         /// <summary>
@@ -124,6 +131,12 @@ namespace H2S
             }
         }
 
+        /// <summary>
+        /// Loads the blacklist from the given file
+        /// </summary>
+        /// <param name="BLFile">Blacklist file</param>
+        /// <returns>true, if loaded</returns>
+        /// <remarks>If <paramref name="BLFile"/> is null or empty, the blacklist is cleared</remarks>
         private bool LoadBlacklist(string BLFile)
         {
             if (string.IsNullOrWhiteSpace(BLFile))
@@ -143,12 +156,22 @@ namespace H2S
             }
         }
 
+        /// <summary>
+        /// Event handler for new control connections
+        /// </summary>
+        /// <param name="sender">Instance</param>
+        /// <param name="c">Control connection</param>
         private void Control_Connection(object sender, ControlConnection c)
         {
             c.Auth += C_Auth;
             c.Command += C_Command;
         }
 
+        /// <summary>
+        /// Handler for control connection commands
+        /// </summary>
+        /// <param name="sender">Instance</param>
+        /// <param name="Args">Arguments</param>
         private void C_Command(object sender, ControlConnection.CommandEventArgs Args)
         {
             Tools.Log(nameof(Http2Socks), $"Control command: {Args.Command}");
@@ -252,6 +275,11 @@ namespace H2S
             }
         }
 
+        /// <summary>
+        /// Handler for new authentication request
+        /// </summary>
+        /// <param name="sender">Instance</param>
+        /// <param name="Args">Arguments</param>
         private void C_Auth(object sender, ControlConnection.AuthEventArgs Args)
         {
             var PW = C.Get("Control", "Password");
@@ -406,30 +434,34 @@ namespace H2S
             }
         }
 
+        /// <summary>
+        /// Constructs and sends the appropriate HTTP error messages to a client
+        /// </summary>
+        /// <param name="client">HTTP connection</param>
+        /// <param name="e">Blacklist entry that matched the request</param>
         private void BlacklistRequest(Socket client, BlacklistEntry e)
         {
             var DisplayName = string.IsNullOrEmpty(e.Name) ? e.Domain : $"\"{e.Name}\" ({e.Domain})";
             var Who = e.Type == BlacklistType.Forbidden ? "The owner of this service" : "A legal entity";
-            var Reply = $"<p>{Who} has blocked access to {HttpActions.HtmlEncode(DisplayName)}.</p>";
+            var SB = new StringBuilder($"<p>{Who} has blocked access to {HttpActions.HtmlEncode(DisplayName)}.</p>");
             if (!string.IsNullOrEmpty(e.URL))
             {
-                Reply +=
+                SB.Append(
                     "<p>Details about this decision can be found at: " +
-                    $"<a href=\"{HttpActions.HtmlEncode(e.URL)}\">{HttpActions.HtmlEncode(e.URL)}</a></p>";
+                    $"<a href=\"{HttpActions.HtmlEncode(e.URL)}\">{HttpActions.HtmlEncode(e.URL)}</a></p>");
             }
             else
             {
-                Reply += "<p>The operator of this Http2Socks instance did not provide a reason for this decision</p>";
+                SB.Append("<p>The operator of this Http2Socks instance did not provide a reason for this decision</p>");
             }
-            Reply += "<p><hr /><br />" +
-                "You can always access onion services safely and anonymously with the Tor browser.</p>";
+            SB.Append("<p><hr /><br />You can always access onion services safely and anonymously with the Tor browser.</p>");
             switch (e.Type)
             {
                 case BlacklistType.UFLR:
-                    HttpActions.UFLR(client, Reply, e.URL);
+                    HttpActions.UFLR(client, SB.ToString(), e.URL);
                     break;
                 default:
-                    HttpActions.Forbidden(client, Reply);
+                    HttpActions.Forbidden(client, SB.ToString());
                     break;
             }
         }
