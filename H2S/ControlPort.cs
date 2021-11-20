@@ -12,6 +12,8 @@ namespace H2S
 {
     public class ControlPort : IDisposable
     {
+        public const int VERSION = 1;
+
         public delegate void ConnectionHandler(object sender, ControlConnection connection);
 
         public event ConnectionHandler Connection = delegate { };
@@ -171,6 +173,9 @@ namespace H2S
                 using (var SW = new StreamWriter(NS))
                 {
                     SW.AutoFlush = true;
+                    //Send greeting
+                    WL(SW, "Http2Socks <https://github.com/AyrA/Http2Socks>");
+                    WL(SW, "OK");
                     using (var SR = new StreamReader(NS))
                     {
                         while (true)
@@ -184,6 +189,10 @@ namespace H2S
                             var Cmd = new CommandEventArgs(Line, IsAuthenticated);
                             switch (Cmd.Command)
                             {
+                                case "VERSION":
+                                    Cmd.IsSuccess = true;
+                                    Cmd.Response = ControlPort.VERSION.ToString();
+                                    break;
                                 case "NOOP":
                                     Cmd.IsSuccess = true;
                                     break;
@@ -222,9 +231,9 @@ namespace H2S
                             }
                             if (Cmd.Response != null)
                             {
-                                SW.WriteLine(Cmd.Response);
+                                WL(SW, Cmd.Response);
                             }
-                            SW.WriteLine(Cmd.IsSuccess ? "OK" : "ERR");
+                            WL(SW, Cmd.IsSuccess ? "OK" : "ERR");
                             if (ExitLoop)
                             {
                                 Tools.Log(nameof(ControlPort), "Client disconnected");
@@ -236,6 +245,20 @@ namespace H2S
                 }
             }
             Exit(this);
+        }
+
+        private static bool WL(StreamWriter SW, string Line)
+        {
+            try
+            {
+                SW.WriteLine(Line);
+            }
+            catch (Exception ex)
+            {
+                Tools.LogEx("Control connection unexpectedly gone", ex);
+                return false;
+            }
+            return true;
         }
     }
 }
