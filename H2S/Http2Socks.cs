@@ -202,18 +202,27 @@ namespace H2S
                 case "BLADD":
                     if (Args.IsAuthenticated)
                     {
-                        if (Args.Arguments.Length == 5)
+                        if (Args.Arguments.Length > 0)
                         {
+                            var A = Args.Arguments;
+                            //Handle the fact that most arguments are optional
+                            var Params = new string[5] {
+                                A.Length > 0 ? A[0] : null,
+                                A.Length > 1 ? A[1] : null,
+                                A.Length > 2 ? A[2] : null,
+                                A.Length > 3 ? A[3] : ((int)BlacklistType.Forbidden).ToString(),
+                                A.Length > 4 ? A[4] : null
+                            };
                             BlacklistEntry BL;
                             try
                             {
                                 BL = new BlacklistEntry()
                                 {
-                                    Domain = Args.Arguments[0],
-                                    Name = Tools.UrlDecode(Args.Arguments[1]),
-                                    InternalNotes = Tools.UrlDecode(Args.Arguments[2]),
-                                    Type = (BlacklistType)int.Parse(Args.Arguments[3]),
-                                    URL = Args.Arguments[4]
+                                    Domain = Params[0],
+                                    Name = Tools.UrlDecode(Params[1]),
+                                    InternalNotes = Tools.UrlDecode(Params[2]),
+                                    Type = (BlacklistType)int.Parse(Params[3]),
+                                    URL = Params[4]
                                 };
                                 BL.Validate();
                             }
