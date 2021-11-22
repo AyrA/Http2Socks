@@ -2,6 +2,8 @@
 
 The control connection is a simple line based protocol that allows control of the service to some degree. It's used to perform certain actions without having to restart the service.
 
+`H2S.php` in the PHP folder implements all commands.
+
 ## Version
 
 See `VERSION` command.
