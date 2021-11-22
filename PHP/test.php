@@ -67,7 +67,7 @@
 		$version=H2S_version($h2s) or die(1);
 		p("API version: $version");
 		H2S_auth($h2s,$auth) or die('Authentication failure. Password or cookie incorrect.');
-		H2S_addToBlacklist($h2s,$example,451,'Test','No reason given','https://example.com/') or die('BLADD failed');
+		H2S_addToBlacklist($h2s,$example,'Test','No reason given',451,'https://example.com/') or die('BLADD failed');
 		print_r(H2S_getBlacklist($h2s));
 		H2S_deleteFromBlacklist($h2s,$example) or die('Delete entry from blacklist failed');
 		H2S_saveBlacklist($h2s) or die('Unable to save the blacklist');

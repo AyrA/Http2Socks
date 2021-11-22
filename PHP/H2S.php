@@ -82,7 +82,7 @@
 	}
 
 	//Adds a domain to the blacklist, or updates an existing domain
-	function H2S_addToBlacklist($fp,$domain,$code=403,$name=NULL,$notes=NULL,$url=NULL){
+	function H2S_addToBlacklist($fp,$domain,$name=NULL,$notes=NULL,$code=403,$url=NULL){
 		$domain=H2S_encode($domain);
 		$code=H2S_encode($code);
 		$name=H2S_encode($name);
