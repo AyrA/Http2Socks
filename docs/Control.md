@@ -6,7 +6,9 @@ The control connection is a simple line based protocol that allows control of th
 
 ## Version
 
-See `VERSION` command.
+Obtainable via: `VERSION` command.
+
+This value is incremented if an incompatible change to the API is made.
 
 The current version is: `1`
 
@@ -24,8 +26,11 @@ If the greeting is an error message, the connection will be terminated and the u
 
 A command is an upper case string, followed by optional arguments.
 Delimiter for arguments is the space.
+If an argument is optional it can be skipped by not supplying it but still leave the space intact.
+This is not necessary at the end of the argument list.
 
-Example: `COMMAND Argument1 Argument2 Argument3`
+- Command with 3 arguments: `COMMAND Argument1 Argument2 Argument3`
+- Same command, but argument 2 is skipped: `COMMAND Argument1  Argument3`
 
 Commands will generally accept any extra arguments to make them forward compatible.
 Some commands only work when the connection is authenticated.
@@ -48,7 +53,7 @@ The last line of a response is always "OK" or "ERR" to indicate success or failu
 - Authentication: Ignored
 - Example: `NOOP`
 
-Note: A connection generally won't time out. This command is only necessary if the traffic is routed across problematic NAT devices.
+Note: A connection generally won't time out. This command is only necessary if the traffic is routed across problematic NAT devices. In that case you want to fire off the command about every 18 seconds.
 
 ## Command `EXIT`
 
@@ -79,6 +84,7 @@ Note: No special treatment needed for passwords that contain spaces. The command
 - Example: `VERSION`
 
 The version is a simple integer that specifies the API version.
+An application must accept multiple numbers on the same line to support future extensions to the protocol.
 
 ## Command `BLRELOAD`
 
@@ -107,15 +113,20 @@ Note: This is the contents from memory and not the file on disk. The actual file
 
 ## Command `BLADD`
 
-- Arguments: `<domain> <name> <notes> <type> <url>`
+- Arguments: `<domain> [name] [notes] [type] [url]`
 - Action: Adds or updates the given line to the memory pool of blackisted onion services
 - Response: Success if the line was added sucessfully
 - Authentication: Yes
 - Example: `BLADD example.onion Evil+Services  451 https://reason.example.com/reason/for/451`
 
-"Name" and "Notes" can be URL encoded to handle spaces. Other characters can also be URL encoded but it's not necessary. For a list of valid types, check the blacklist chapter.
+Defaults:
 
-Note: To skip arguments, don't specify it but still add the space character. The command example doesn't specifies internal notes, so there's just two spaces in succession
+- name: Empty string
+- notes: Empty string
+- type: 403
+- url: Empty string
+
+"Name" and "Notes" can be URL encoded to handle spaces. Other characters can also be URL encoded but it's not necessary. For a list of valid types, check the blacklist chapter.
 
 Note: Entries are not saved to file immediately. See `BLSAVE` for how to do this.
 
@@ -134,7 +145,7 @@ Note: Entries are not deleted from the file immediately. See `BLSAVE` for how to
 ## Command `BLSAVE`
 
 - Arguments: None
-- Action: Saves the blacklist in memory to the blacklsit file
+- Action: Saves the blacklist in memory to the blacklist file
 - Response: Success if file could be written
 - Authentication: Yes
 - Example: `BLSAVE`

@@ -86,11 +86,11 @@ This is the port for the control connection listener. Default is `12244`
 This is the password used for authentication.
 
 You can type the password in the clear. The application will then hash it and replace the setting.
-The entry format for a hashed password is: ENC:salt:hash
+The entry format for a hashed password is: `ENC:salt:hash`
 
 - ENC is literal "ENC"
 - salt is a salt as Base64 encoded
-- hash is the result of HMAC(salt,password) as Base64 encoded
+- hash is the result of `HMAC('sha256',salt,password)` as Base64 encoded
 
 You can leave this absent to disable password based authentication.
 If this entry is absent, the "Cookie" setting must be set.

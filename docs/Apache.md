@@ -54,7 +54,7 @@ They're around 50 USD per year, or your soul if you want to use certbot with Let
 ## Secure TLS
 
 Make sure your server and users are not vulnerable to attacks on the TLS protocol.
-You can use the Mozilla SSL confifgurator to get appropriate settings for apache:
+You can use the Mozilla SSL configurator to get appropriate settings for apache:
 
 https://ssl-config.mozilla.org/#server=apache&version=2.4.51&config=intermediate&openssl=1.1.1k&guideline=5.6
 

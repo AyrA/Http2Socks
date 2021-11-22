@@ -65,7 +65,7 @@ After you made the appropriate configuration changes, you can start the service 
 
 ## Configuration
 
-The service is configured using a `config.ini` file. For details see "docs\Config.md"
+The service is configured using a `config.ini` file. For details see "docs/Config.md"
 
 ## Reverse Proxy
 
