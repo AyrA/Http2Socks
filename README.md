@@ -165,7 +165,7 @@ Note: When saving the list using `ALSAVE` it will add `.onion` if missing and co
 #### Alias
 
 This is the aliased name for the domain.
-it should not contain ".onion"
+it should not contain `.onion`
 
 #### Type
 
