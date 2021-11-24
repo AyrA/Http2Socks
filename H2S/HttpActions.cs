@@ -43,6 +43,22 @@ namespace H2S
         }
 
         /// <summary>
+        /// HTTP 410
+        /// </summary>
+        /// <param name="Client">Socket</param>
+        /// <param name="Body">Message</param>
+        /// <returns>true, if successfully sent</returns>
+        public static bool Gone(Socket Client, string Body)
+        {
+            if (string.IsNullOrEmpty(Body))
+            {
+                Body = "<p>This resource is not available and will not be in the future.</p>";
+            }
+            Body = FormatBody(410, "Gone", Body);
+            return SendHTTP(Client, 410, "Gone", GetHeaders(Body), Body);
+        }
+
+        /// <summary>
         /// HTTP 403
         /// </summary>
         /// <param name="Client">Socket</param>

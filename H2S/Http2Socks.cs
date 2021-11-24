@@ -393,8 +393,16 @@ namespace H2S
             var Host = Tools.NormalizeOnion(M[1]);
             if (Host == null)
             {
-                Tools.Log(nameof(Http2Socks), $"Rejected host (onion format error): {HostHeader[0]}");
-                HttpActions.BadRequest(Args.Client, $"This service can only be used to access onion websites.");
+                if (Tools.IsV2Onion(M[1]))
+                {
+                    Tools.Log(nameof(Http2Socks), $"Rejected host (outdated V2 onion): {M[1]}");
+                    HttpActions.Gone(Args.Client, $"{M[1]} is a version 2 onion name which is no longer supported by Tor.");
+                }
+                else
+                {
+                    Tools.Log(nameof(Http2Socks), $"Rejected host (onion format error): {HostHeader[0]}");
+                    HttpActions.BadRequest(Args.Client, "This service can only be used to access onion websites.");
+                }
                 Args.Client.Dispose();
                 return;
             }
