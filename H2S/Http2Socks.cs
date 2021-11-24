@@ -36,7 +36,7 @@ namespace H2S
         /// Holds the configuration.
         /// Loaded once <see cref="OnStart(string[])"/> is called.
         /// </summary>
-        private Configuration C;
+        private Settings C;
 
         /// <summary>
         /// NOOP
@@ -59,13 +59,16 @@ namespace H2S
                 {
                     Tools.ExitEx("Service control error", new InvalidOperationException("Service start function called multiple times"));
                 }
-                C = new Configuration(Tools.ConfigFile);
-                if (Tools.HashControlPassword(C))
+
+                C = new Settings(Tools.ConfigFile);
+                if (C.Control.HashPassword())
                 {
                     Tools.Log(nameof(Http2Socks), "INI password was hashed");
                     try
                     {
-                        C.Write();
+                        var Config = C.Save();
+                        Config.FileName = Tools.ConfigFile;
+                        Config.Write();
                     }
                     catch (Exception ex)
                     {
@@ -75,20 +78,19 @@ namespace H2S
                 }
                 try
                 {
-                    Tools.ValidateConfig(C);
+                    C.Validate();
                 }
                 catch (Exception ex)
                 {
-                    Tools.ExitEx("Startup error", ex);
+                    Tools.ExitEx("Configuration failed to validate", ex);
                     throw;
                 }
 
-                if (C.Get("Control", "Cookie") != null)
+                if (C.Control.CookieFile != null)
                 {
-                    CookiePassword = Convert.ToBase64String(Tools.GetSalt(30));
                     try
                     {
-                        System.IO.File.WriteAllText(C.Get("Control", "Cookie"), CookiePassword);
+                        CookiePassword = C.Control.WriteCookieFile();
                     }
                     catch (Exception ex)
                     {
@@ -101,10 +103,10 @@ namespace H2S
                     CookiePassword = null;
                 }
 
-                LoadBlacklist(C.Get("DNS", "Blacklist"));
+                LoadBlacklist(C.Dns.Blacklist);
                 Tools.Log(nameof(Http2Socks), $"{Blacklist.Count} domains are blacklisted");
 
-                Server = new HttpListener(new IPEndPoint(IPAddress.Parse(C.Get("HTTP", "IP")), int.Parse(C.Get("HTTP", "Port"))));
+                Server = new HttpListener(new IPEndPoint(C.Http.IP, C.Http.Port));
                 Server.HttpHeaderComplete += Server_HttpHeaderComplete;
                 try
                 {
@@ -115,9 +117,9 @@ namespace H2S
                     Tools.ExitEx("Unable to start HTTP listener", ex);
                     throw;
                 }
-                if (C.List().Contains("Control"))
+                if (C.Control.Enabled)
                 {
-                    Control = new ControlPort(new IPEndPoint(IPAddress.Parse(C.Get("Control", "IP")), int.Parse(C.Get("Control", "Port"))));
+                    Control = new ControlPort(new IPEndPoint(C.Control.IP, C.Control.Port));
                     Control.Connection += Control_Connection;
                     try
                     {
@@ -188,7 +190,7 @@ namespace H2S
                 case "BLRELOAD":
                     if (Args.IsAuthenticated)
                     {
-                        if (LoadBlacklist(C.Get("DNS", "Blacklist")))
+                        if (LoadBlacklist(C.Dns.Blacklist))
                         {
                             Args.Response = $"List reloaded. {Blacklist.Count} entries";
                             Args.IsSuccess = true;
@@ -271,7 +273,7 @@ namespace H2S
                     if (Args.IsAuthenticated)
                     {
                         var BL = Tools.SaveBlacklistEntries(Blacklist);
-                        BL.FileName = C.Get("DNS", "Blacklist");
+                        BL.FileName = C.Dns.Blacklist;
                         if (BL.FileName != null)
                         {
                             BL.Write();
@@ -293,10 +295,9 @@ namespace H2S
         /// <param name="Args">Arguments</param>
         private void C_Auth(object sender, ControlConnection.AuthEventArgs Args)
         {
-            var PW = C.Get("Control", "Password");
-            if (Tools.IsHashedPassword(PW))
+            if (C.Control.IsHashedPassword())
             {
-                Args.Success = Tools.CheckPassword(Args.AuthData, PW);
+                Args.Success = C.Control.CheckPassword(Args.AuthData);
             }
             if (!Args.Success && CookiePassword != null)
             {
@@ -380,7 +381,7 @@ namespace H2S
                 Args.Client.Dispose();
                 return;
             }
-            var Suffix = Regex.Escape(C.Get("DNS", "Suffix"));
+            var Suffix = Regex.Escape(C.Dns.Suffix);
             var M = HostHeader[0].Match(@"^(.+)\." + Suffix + @"(:\d+)?$", RegexOptions.IgnoreCase);
             if (M == null)
             {
@@ -428,8 +429,8 @@ namespace H2S
             Socket RemoteConnection;
             try
             {
-                var IPE = new IPEndPoint(IPAddress.Parse(C.Get("TOR", "IP")), int.Parse(C.Get("TOR", "Port")));
-                RemoteConnection = SocksClient.Open(IPE, Addr.Address.ToString(), Host, Port, int.Parse(C.Get("TOR", "Timeout")));
+                var IPE = new IPEndPoint(C.Tor.IP,C.Tor.Port);
+                RemoteConnection = SocksClient.Open(IPE, Addr.Address.ToString(), Host, Port, C.Tor.Timeout);
                 RemoteConnection.Send(Encoding.UTF8.GetBytes(Args.CombineHeaders() + "\r\n\r\n"));
             }
             catch (Exception ex)

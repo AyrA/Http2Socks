@@ -18,7 +18,7 @@ namespace H2S
             if (!File.Exists(Tools.ConfigFile))
             {
                 Tools.Log(nameof(Program), "Config does not exist. Creating defaults");
-                var C = Tools.DefaultConfig();
+                var C = new Settings().Save();
                 C.FileName = Tools.ConfigFile;
                 C.Write();
             }

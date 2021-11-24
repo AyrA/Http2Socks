@@ -58,8 +58,10 @@
     </Compile>
     <Compile Include="HttpActions.cs" />
     <Compile Include="HttpListener.cs" />
+    <Compile Include="IValidateable.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="SocksClient.cs" />
     <Compile Include="Tools.cs" />
   </ItemGroup>
