@@ -21,10 +21,10 @@
 	}
 
 	//Adds a domain to the Aliaslist, or updates an existing domain
-	function H2S_addToAliaslist($fp,$domain,$alias=NULL,$code=0){
+	function H2S_addToAliaslist($fp,$domain,$alias,$code=0){
 		$domain=H2S_encode($domain);
-		$code=H2S_encode($code);
 		$alias=H2S_encode($alias);
+		$code=H2S_encode($code);
 		list($ok,$data)=H2S_sendCommand($fp,"ALADD $domain $alias $code");
 		return $ok;
 	}

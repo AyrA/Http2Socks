@@ -232,6 +232,10 @@ namespace H2S
                     if (Args.IsAuthenticated)
                     {
                         Args.Response = Halt ? "HTTP processing already stopped" : "HTTP processing halted";
+                        if (!Halt)
+                        {
+                            Tools.Log(nameof(Http2Socks), "HTTP processing halted");
+                        }
                         Halt = true;
                         Args.IsSuccess = true;
                     }
@@ -240,6 +244,10 @@ namespace H2S
                     if (Args.IsAuthenticated)
                     {
                         Args.Response = Halt ? "HTTP processing continued" : "HTTP processing was not stopped";
+                        if (Halt)
+                        {
+                            Tools.Log(nameof(Http2Socks), "HTTP processing continued");
+                        }
                         Halt = false;
                         Args.IsSuccess = true;
                     }
@@ -640,12 +648,12 @@ namespace H2S
                 {
                     //Construct redirect URL
                     var Redir = $"http://{Alias.Onion}.{C.Dns.Suffix}{Args.Path}";
-                    Tools.Log(nameof(Http2Socks), $"Alias redirection {Alias.Alias} --> {Alias.Onion}");
+                    Tools.Log(nameof(Http2Socks), $"Alias redirection: {Alias.Alias} --> {Alias.Onion}");
                     HttpActions.Redirect(Args.Client, Redir);
                     Args.Client.Dispose();
                     return;
                 }
-                Tools.Log(nameof(Http2Socks), $"Alias rewrite {Alias.Alias} --> {Alias.Onion}");
+                Tools.Log(nameof(Http2Socks), $"Alias rewrite: {Alias.Alias} --> {Alias.Onion}");
                 Host = Alias.Onion;
             }
             else

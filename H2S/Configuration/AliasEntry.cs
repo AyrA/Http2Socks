@@ -57,8 +57,8 @@ namespace H2S
             Validate();
             Onion = Tools.NormalizeOnion(Onion);
             C.Empty(Onion);
-            C.Set(Alias, "Alias", Alias);
-            C.Set(Alias, "Type", (int)Type);
+            C.Set(Onion, "Alias", Alias);
+            C.Set(Onion, "Type", (int)Type);
         }
 
         /// <summary>

@@ -63,14 +63,27 @@
 	if($h2s=H2S_connect()){
 		//Construct a theoretically valid onion domain
 		$example=str_pad('blocked',56,'x') . '.onion';
+		$aliasdomain='ewjipqsovlf7nuy3qeomovtnoqop2f2hkugtjxvtau5su4cjdgvjygid';
 		p('Connected');
 		$version=H2S_version($h2s) or die(1);
 		p("API version: $version");
 		H2S_auth($h2s,$auth) or die('Authentication failure. Password or cookie incorrect.');
+		H2S_halt($h2s);
+		
+		//Blacklist commands
 		H2S_addToBlacklist($h2s,$example,'Test','No reason given',451,'https://example.com/') or die('BLADD failed');
 		print_r(H2S_getBlacklist($h2s));
 		H2S_deleteFromBlacklist($h2s,$example) or die('Delete entry from blacklist failed');
 		H2S_saveBlacklist($h2s) or die('Unable to save the blacklist');
+		
+		//Alias commands
+		H2S_addToAliaslist($h2s,$aliasdomain,'example',0) or die('Adding entry to alias list failed');
+		print_r(H2S_getAliaslist($h2s));
+		H2S_saveAliaslist($h2s) or die('Unable to save the alias list');
+		
+		//Generic commands
+		print_r(H2S_info($h2s));
+		H2S_cont($h2s);
 		H2S_noop($h2s) or die('NOOP failed');
 		H2S_close($h2s) or die('EXIT failed');
 		p('Test completed');
