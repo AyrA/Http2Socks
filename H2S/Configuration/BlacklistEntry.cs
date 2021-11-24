@@ -112,7 +112,7 @@ namespace H2S
             {
                 Domain = SectionName,
                 InternalNotes = C.Get(SectionName, "Notes"),
-                Type = (BlacklistType)int.Parse(C.Get(SectionName, "Reason")),
+                Type = C.GetEnum(SectionName, "Reason", BlacklistType.Forbidden),
                 Name = C.Get(SectionName, "Name"),
                 URL = C.Get(SectionName, "URL"),
             };
