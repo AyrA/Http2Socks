@@ -34,6 +34,12 @@ namespace H2S
             {
                 throw new ValidationException("AliasEntry.Alias is empty");
             }
+            Alias = Alias.ToLower();
+            //Cut off .onion if it was there
+            if (Alias.IsMatch(@"\.onion$"))
+            {
+                Alias = Alias.Substring(0, Alias.Length - 6);
+            }
             if (!Alias.IsMatch(AliasMask) || Alias.Contains("--") || Alias.StartsWith("-") || Alias.Contains("."))
             {
                 throw new ValidationException("AliasEntry.Alias not a valid domain label");
@@ -42,6 +48,7 @@ namespace H2S
             {
                 throw new ValidationException("AliasEntry.Onion is not a valid V3 onion");
             }
+            Onion = Tools.NormalizeOnion(Onion);
             if (!Enum.IsDefined(Type.GetType(), Type))
             {
                 throw new ValidationException("AliasEntry.Type is not a valid selection of AliasType");
@@ -56,27 +63,28 @@ namespace H2S
         {
             Validate();
             Onion = Tools.NormalizeOnion(Onion);
-            C.Empty(Onion);
-            C.Set(Onion, "Alias", Alias);
-            C.Set(Onion, "Type", (int)Type);
+            C.Empty(Alias);
+            C.Set(Alias, "Onion", Onion);
+            C.Set(Alias, "Type", (int)Type);
         }
 
         /// <summary>
         /// Reads and fills an instance from the given configuration file
         /// </summary>
         /// <param name="C">Configuration file</param>
-        /// <param name="SectionName">Section name to read</param>
+        /// <param name="SectionName">Section name to read (also the alias)</param>
         /// <returns>Instance</returns>
         public static AliasEntry FromConfig(Configuration C, string SectionName)
         {
-            if (Tools.NormalizeOnion(SectionName) == null)
+            if (string.IsNullOrWhiteSpace(SectionName))
             {
-                throw new FormatException($"{SectionName} is not a valid onion domain");
+                throw new ArgumentException($"'{nameof(SectionName)}' cannot be null or whitespace.", nameof(SectionName));
             }
+
             var AE = new AliasEntry()
             {
-                Onion = Tools.NormalizeOnion(SectionName),
-                Alias = C.Get(SectionName, "Alias", "").ToLower(),
+                Onion = Tools.NormalizeOnion(C.Get(SectionName, "Onion")),
+                Alias = SectionName,
                 Type = C.GetEnum(SectionName, "Type", AliasType.Rewrite),
             };
             AE.Validate();

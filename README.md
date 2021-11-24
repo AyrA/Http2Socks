@@ -106,19 +106,19 @@ The section name is the onion domain. The `.onion` part is optional.
 
 Note: When saving the list using `BLSAVE` it will add `.onion` if missing and convert the domain to lowercase.
 
-#### Name
+#### Setting `Name`
 
 A name or description of the service.
 This is displayed to the user on error pages.
 This setting is optional.
 
-#### Notes
+#### Setting `Notes`
 
 This is a field where you can store personal notes.
 They're never shown to the user.
 This setting is optional.
 
-#### Reason
+#### Setting `Reason`
 
 This is the HTTP error reason code. It can be either 403 or 451.
 - 403: Forbidden; Generic "go away" code
@@ -126,7 +126,7 @@ This is the HTTP error reason code. It can be either 403 or 451.
 
 Rule of thumb is that 403 is because you don't want to serve this content and 451 is because someone else doesn't want you to serve this content.
 
-#### URL
+#### Setting `URL`
 
 This is the URL to the document/page stating the reason why this domain is blacklisted.
 This setting is optional.
@@ -151,23 +151,22 @@ or the domain is transparently rewritten at the backend, depending on the "Type"
 Each entry is in the following format:
 
 ```ini
-[long.onion]
-Alias=Short
+[alias]
+Onion=long.onion
 Type=0
 ```
 
 #### Section
 
-The section name is the onion domain. The `.onion` part is optional.
+The section name is the alias without the `.onion` TLD.
+
+#### Setting `Onion`
+
+This is the main `.onion` domain.
 
 Note: When saving the list using `ALSAVE` it will add `.onion` if missing and convert the domain to lowercase.
 
-#### Alias
-
-This is the aliased name for the domain.
-it should not contain `.onion`
-
-#### Type
+#### Setting `Type`
 
 This declares how to handle this alias.
 It can be one of these values:
@@ -177,7 +176,8 @@ It can be one of these values:
 
 ## Testing
 
-The Tor project runs its website on an onion service. You can use that to test your setup.
-Just ad your suffix to the domain below:
+I run a small example site for people to test:
 
-`2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion`
+`ewjipqsovlf7nuy3qeomovtnoqop2f2hkugtjxvtau5su4cjdgvjygid.onion`
+
+It will display a message message similar to `example.com`
