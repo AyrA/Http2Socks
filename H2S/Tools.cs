@@ -331,10 +331,6 @@ namespace H2S
             var Aliases = C.List().Select(m => AliasEntry.FromConfig(C, m)).ToArray();
             for(var i = 0; i < Aliases.Length; i++)
             {
-                if(Aliases.Count(m => m.Onion == Aliases[i].Onion) > 1)
-                {
-                    throw new Exception($"Duplicate onion found: {Aliases[1].Onion}");
-                }
                 if (Aliases.Count(m => m.Alias == Aliases[i].Alias) > 1)
                 {
                     throw new Exception($"Duplicate alias found: {Aliases[1].Onion}");
