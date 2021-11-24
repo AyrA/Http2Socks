@@ -396,7 +396,7 @@ namespace H2S
                 if (Tools.IsV2Onion(M[1]))
                 {
                     Tools.Log(nameof(Http2Socks), $"Rejected host (outdated V2 onion): {M[1]}");
-                    HttpActions.Gone(Args.Client, $"{M[1]} is a version 2 onion name which is no longer supported by Tor.");
+                    HttpActions.Gone(Args.Client, $"{HttpActions.HtmlEncode(M[1])} is a version 2 onion name which is no longer supported by Tor.");
                 }
                 else
                 {
@@ -437,13 +437,13 @@ namespace H2S
             Socket RemoteConnection;
             try
             {
-                var IPE = new IPEndPoint(C.Tor.IP,C.Tor.Port);
+                var IPE = new IPEndPoint(C.Tor.IP, C.Tor.Port);
                 RemoteConnection = SocksClient.Open(IPE, Addr.Address.ToString(), Host, Port, C.Tor.Timeout);
                 RemoteConnection.Send(Encoding.UTF8.GetBytes(Args.CombineHeaders() + "\r\n\r\n"));
             }
             catch (Exception ex)
             {
-                HttpActions.ServiceUnavailable(Args.Client, $"<p>Cannot connect to the destination. Details: {ex.Message}</p>");
+                HttpActions.ServiceUnavailable(Args.Client, $"<p>Cannot connect to the destination. Details: {HttpActions.HtmlEncode(ex.Message)}</p>");
                 Args.Client.Dispose();
                 Tools.LogEx("SOCKS failed", ex);
                 return;
@@ -454,7 +454,7 @@ namespace H2S
             }
             catch (Exception ex)
             {
-                Tools.LogEx("CAT failed", ex);
+                Tools.LogEx("Tools.Cat failed", ex);
             }
         }
 
