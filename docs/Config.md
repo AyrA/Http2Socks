@@ -67,6 +67,14 @@ The file contains a list of onion domains that are blacklisted. Users cannot acc
 This functionality is ignored if the setting is missing, empty, or the file doesn't exist.
 The format of the file is described in the Blacklist chapter further below.
 
+### Setting `Alias`
+
+A file path to an alias file.
+
+The file contains a list of onion domains that are aliased. This allows users to use shorter .onion names.
+This functionality is ignored if the setting is missing, empty, or the file doesn't exist.
+The format of the file is described in the Alias chapter further below.
+
 ## Section `Control`
 
 This section holds configuration for the control port.

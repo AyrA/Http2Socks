@@ -47,8 +47,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlacklistEntry.cs" />
-    <Compile Include="Configuration.cs" />
+    <Compile Include="Configuration\AliasEntry.cs" />
+    <Compile Include="Configuration\BlacklistEntry.cs" />
+    <Compile Include="Configuration\Configuration.cs" />
     <Compile Include="ControlPort.cs" />
     <Compile Include="Http2Socks.cs">
       <SubType>Component</SubType>
@@ -61,7 +62,7 @@
     <Compile Include="IValidateable.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Settings.cs" />
+    <Compile Include="Configuration\Settings.cs" />
     <Compile Include="SocksClient.cs" />
     <Compile Include="Tools.cs" />
   </ItemGroup>

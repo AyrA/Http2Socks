@@ -93,7 +93,7 @@ The service will not attempt to look up the domain in the network at all.
 Each entry is in the following format:
 
 ```ini
-[example.onion]
+[long.onion]
 Name=Name of the onion service
 Notes=Private information goes here
 Reason=403
@@ -104,7 +104,7 @@ URL=https://example/url/to/reason/for/blacklisting
 
 The section name is the onion domain. The `.onion` part is optional.
 
-Note: When saving the blacklsit using `BLSAVE` it will add `.onion` if missing and convert the domain to lowercase.
+Note: When saving the list using `BLSAVE` it will add `.onion` if missing and convert the domain to lowercase.
 
 #### Name
 
@@ -136,9 +136,48 @@ Recommended documents for given reasons:
 - 403: Link to a document explaining why you decided to block this onion, or link to the relevant section of your TOS
 - 451: Link to the document from the entity that issued the request
 
+## Alias
+
+This application has alias functionality. The alis list is configured in `config.ini`.
+By default, no onion domains are aliased.
+
+The alias list is read by the service upon startup. The file is in INI format.
+
+If a user tries to access an alias of a domain, the user is either redirected to the full domain,
+or the domain is transparently rewritten at the backend, depending on the "Type" value (see below).
+
+### Entries
+
+Each entry is in the following format:
+
+```ini
+[long.onion]
+Alias=Short
+Type=0
+```
+
+#### Section
+
+The section name is the onion domain. The `.onion` part is optional.
+
+Note: When saving the list using `ALSAVE` it will add `.onion` if missing and convert the domain to lowercase.
+
+#### Alias
+
+This is the aliased name for the domain.
+it should not contain ".onion"
+
+#### Type
+
+This declares how to handle this alias.
+It can be one of these values:
+
+- 0 or "Rewrite": Transparently rewrites the domain. The short domain remains in the browser address bar
+- 1 or "Redirect": Redirects the user to the full .onion. The real onion name will be put in the browser address bar
+
 ## Testing
 
 The Tor project runs its website on an onion service. You can use that to test your setup.
 Just ad your suffix to the domain below:
 
-http://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion
+`2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion`

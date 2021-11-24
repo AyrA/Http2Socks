@@ -5,7 +5,7 @@ namespace H2S
     /// <summary>
     /// Represents an entry in the blacklist file
     /// </summary>
-    public class BlacklistEntry
+    public class BlacklistEntry : IValidateable
     {
         /// <summary>
         /// Blocked onion domain
@@ -36,17 +36,17 @@ namespace H2S
             var Temp = Tools.NormalizeOnion(Domain);
             if (string.IsNullOrEmpty(Temp))
             {
-                throw new FormatException("Domain is not a valid onion domain");
+                throw new ValidationException("Domain is not a valid onion domain");
             }
             if (!Enum.IsDefined(Type.GetType(), Type))
             {
-                throw new FormatException("Type is not a valid value");
+                throw new ValidationException("Type is not a valid value");
             }
             if (!string.IsNullOrWhiteSpace(URL))
             {
                 if (!Uri.TryCreate(URL, UriKind.Absolute, out _))
                 {
-                    throw new FormatException("URL is not a valid absolute URL");
+                    throw new ValidationException("URL is not a valid absolute URL");
                 }
             }
             else

@@ -138,6 +138,43 @@ namespace H2S
         }
 
         /// <summary>
+        /// Gets an enum from the configuration that is either supplied as number or as name
+        /// </summary>
+        /// <typeparam name="T">Enum type</typeparam>
+        /// <param name="Section">Section name</param>
+        /// <param name="Setting">Setting name</param>
+        /// <param name="Default">Default value</param>
+        /// <returns>Parsed enum, or default value</returns>
+        public T GetEnum<T>(string Section, string Setting, T Default = default) where T : Enum
+        {
+            var Value = Get(Section, Setting);
+            if (Value == null)
+            {
+                return Default;
+            }
+            if (int.TryParse(Value, out int Numeric))
+            {
+                T Ret = (T)(object)Numeric;
+                if (Enum.IsDefined(Ret.GetType(), Ret))
+                {
+                    return Ret;
+                }
+            }
+            else
+            {
+                try
+                {
+                    return (T)Enum.Parse(typeof(T), Value);
+                }
+                catch
+                {
+                    return Default;
+                }
+            }
+            return Default;
+        }
+
+        /// <summary>
         /// Sets a setting to the given value.
         /// Creates section and setting if needed
         /// </summary>

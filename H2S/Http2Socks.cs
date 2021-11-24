@@ -31,6 +31,10 @@ namespace H2S
         /// Holds a list of all blacklisted domains
         /// </summary>
         private List<BlacklistEntry> Blacklist;
+        /// <summary>
+        /// Holds a list of aliased domain names
+        /// </summary>
+        private List<AliasEntry> Aliases;
 
         /// <summary>
         /// Holds the configuration.
@@ -45,6 +49,7 @@ namespace H2S
         {
             InitializeComponent();
             Blacklist = new List<BlacklistEntry>();
+            Aliases = new List<AliasEntry>();
         }
 
         /// <summary>
@@ -104,7 +109,9 @@ namespace H2S
                 }
 
                 LoadBlacklist(C.Dns.Blacklist);
+                LoadAliases(C.Dns.Alias);
                 Tools.Log(nameof(Http2Socks), $"{Blacklist.Count} domains are blacklisted");
+                Tools.Log(nameof(Http2Socks), $"{Aliases.Count} domains are aliased");
 
                 Server = new HttpListener(new IPEndPoint(C.Http.IP, C.Http.Port));
                 Server.HttpHeaderComplete += Server_HttpHeaderComplete;
@@ -131,6 +138,31 @@ namespace H2S
                         throw;
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Loads aliases from the given file
+        /// </summary>
+        /// <param name="ALFile">Alias list file</param>
+        /// <returns>true, if loaded</returns>
+        /// <remarks>If <paramref name="ALFile"/> is null or empty, the alias list is cleared</remarks>
+        private bool LoadAliases(string ALFile)
+        {
+            if (string.IsNullOrWhiteSpace(ALFile))
+            {
+                Aliases.Clear();
+                return true;
+            }
+            try
+            {
+                Aliases = new List<AliasEntry>(Tools.GetAliasEntries(ALFile));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Tools.LogEx("Failed to reload blacklist", ex);
+                return false;
             }
         }
 
@@ -180,10 +212,153 @@ namespace H2S
             Tools.Log(nameof(Http2Socks), $"Control command: {Args.Command}");
             switch (Args.Command)
             {
+                case "ALLIST":
+                case "ALRELOAD":
+                case "ALADD":
+                case "ALREMOVE":
+                case "ALSAVE":
+                    HandleALCommands(Args);
+                    break;
+                case "BLLIST":
+                case "BLRELOAD":
+                case "BLADD":
+                case "BLREMOVE":
+                case "BLSAVE":
+                    HandleBLCommands(Args);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// handles alias commands
+        /// </summary>
+        /// <param name="Args">Arguments</param>
+        private void HandleALCommands(ControlConnection.CommandEventArgs Args)
+        {
+            switch (Args.Command)
+            {
+                case "ALLIST":
+                    if (Args.IsAuthenticated)
+                    {
+                        lock (Aliases)
+                        {
+                            Args.Response = Tools.SaveAliasEntries(Aliases).ToString();
+                        }
+                        Args.IsSuccess = true;
+                    }
+                    break;
+                case "ALRELOAD":
+                    if (Args.IsAuthenticated)
+                    {
+                        if (LoadAliases(C.Dns.Alias))
+                        {
+                            Args.Response = $"List reloaded. {Aliases.Count} entries";
+                            Args.IsSuccess = true;
+                        }
+                        else
+                        {
+                            Args.Response = $"Failed to reload the file. It doesn't exists or is locked.";
+                        }
+                    }
+                    break;
+                case "ALADD":
+                    if (Args.IsAuthenticated)
+                    {
+                        if (Args.Arguments.Length > 1)
+                        {
+                            AliasEntry A = null;
+                            try
+                            {
+                                A = new AliasEntry
+                                {
+                                    Onion = Tools.NormalizeOnion(Args.Arguments[0]),
+                                    Alias = Args.Arguments[1],
+                                    Type = Args.Arguments.Length > 2 ? (AliasType)int.Parse(Args.Arguments[2]) : AliasType.Rewrite
+                                };
+                                A.Validate();
+                            }
+                            catch (Exception ex)
+                            {
+                                Args.Response = ex.Message;
+                                A = null;
+                            }
+                            if (A != null)
+                            {
+                                Tools.Log(nameof(Http2Socks), $"Alias added for {A.Onion} --> {A.Alias}");
+                                lock (Aliases)
+                                {
+                                    Aliases.RemoveAll(m => m.Onion == A.Onion || m.Alias == A.Alias);
+                                    Aliases.Add(A);
+                                }
+                                Args.IsSuccess = true;
+                            }
+                        }
+                        else
+                        {
+                            Args.Response = "This command requires at least two arguments";
+
+                        }
+                    }
+                    break;
+                case "ALREMOVE":
+                    if (Args.IsAuthenticated)
+                    {
+                        if (Args.Arguments.Length >= 1)
+                        {
+                            var Onion = Tools.NormalizeOnion(Args.Arguments[0]);
+                            if (Onion != null)
+                            {
+                                lock (Aliases)
+                                {
+                                    Aliases.RemoveAll(m => m.Onion == Onion);
+                                }
+                                Args.IsSuccess = true;
+                            }
+                            else
+                            {
+                                Args.Response = "Invalid onion domain";
+                            }
+                        }
+                        else
+                        {
+                            Args.Response = "Invalid arguments";
+                        }
+                    }
+                    break;
+                case "ALSAVE":
+                    if (Args.IsAuthenticated)
+                    {
+                        if (!string.IsNullOrWhiteSpace(C.Dns.Alias))
+                        {
+                            var A = Tools.SaveAliasEntries(Aliases);
+                            A.FileName = C.Dns.Alias;
+                            A.Write();
+                            Args.IsSuccess = true;
+                        }
+                        else
+                        {
+                            Args.Response = "Alias list not configured";
+                        }
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Handles blacklist commands
+        /// </summary>
+        /// <param name="Args">Arguments</param>
+        private void HandleBLCommands(ControlConnection.CommandEventArgs Args)
+        {
+            switch (Args.Command)
+            {
                 case "BLLIST":
                     if (Args.IsAuthenticated)
                     {
-                        Args.Response = Tools.SaveBlacklistEntries(Blacklist).ToString();
+                        lock (Blacklist)
+                        {
+                            Args.Response = Tools.SaveBlacklistEntries(Blacklist).ToString();
+                        }
                         Args.IsSuccess = true;
                     }
                     break;
@@ -236,8 +411,11 @@ namespace H2S
                             if (BL != null)
                             {
                                 Tools.Log(nameof(Http2Socks), $"Blacklisted {BL.Domain}");
-                                Blacklist.RemoveAll(m => m.Domain == BL.Domain);
-                                Blacklist.Add(BL);
+                                lock (Blacklist)
+                                {
+                                    Blacklist.RemoveAll(m => m.Domain == BL.Domain);
+                                    Blacklist.Add(BL);
+                                }
                                 Args.IsSuccess = true;
                             }
                         }
@@ -250,7 +428,7 @@ namespace H2S
                 case "BLREMOVE":
                     if (Args.IsAuthenticated)
                     {
-                        if (Args.Arguments.Length == 1)
+                        if (Args.Arguments.Length >= 1)
                         {
                             var Onion = Tools.NormalizeOnion(Args.Arguments[0]);
                             if (Onion != null)
@@ -390,7 +568,30 @@ namespace H2S
                 Args.Client.Dispose();
                 return;
             }
-            var Host = Tools.NormalizeOnion(M[1]);
+
+            string Host = null;
+            var AliasName = M[1].Match(@"([^.]+)\.onion$", RegexOptions.IgnoreCase);
+            string Domain = AliasName?[1];
+            var Alias = Domain == null ? null : Aliases.FirstOrDefault(m => m.Alias == Domain);
+            //Handle aliases before trying to convert to onion
+            if (Alias != null)
+            {
+                if (Alias.Type == AliasType.Redirect)
+                {
+                    //Construct redirect URL
+                    var Redir = $"http://{Alias.Onion}.{C.Dns.Suffix}{Args.Path}";
+                    Tools.Log(nameof(Http2Socks), $"Alias redirection {Alias.Alias} --> {Alias.Onion}");
+                    HttpActions.Redirect(Args.Client, Redir);
+                    Args.Client.Dispose();
+                    return;
+                }
+                Tools.Log(nameof(Http2Socks), $"Alias rewrite {Alias.Alias} --> {Alias.Onion}");
+                Host = Alias.Onion;
+            }
+            else
+            {
+                Host = Tools.NormalizeOnion(M[1]);
+            }
             if (Host == null)
             {
                 if (Tools.IsV2Onion(M[1]))
@@ -406,7 +607,9 @@ namespace H2S
                 Args.Client.Dispose();
                 return;
             }
+            //"Host" at this point is guaranteed to be a valid, normalized v3 onion domain
 
+            //Handle blacklist
             if (Blacklist.Any(m => m.Domain == Host))
             {
                 BlacklistRequest(Args.Client, Blacklist.First(m => m.Domain == Host));

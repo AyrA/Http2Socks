@@ -11,6 +11,29 @@ namespace H2S
     public static class HttpActions
     {
         /// <summary>
+        /// HTTP 307
+        /// </summary>
+        /// <param name="Client">Socket</param>
+        /// <param name="NewURL">URL to redirect to</param>
+        /// <returns>true, if successfully sent</returns>
+        public static bool Redirect(Socket Client, string NewURL)
+        {
+            if (NewURL is null)
+            {
+                throw new ArgumentNullException(nameof(NewURL));
+            }
+
+            var Body=$"<p>This domain is aliased to <a href=\"{HtmlEncode(NewURL)}\">{HtmlEncode(NewURL)}</a></p>";
+
+            Body = FormatBody(307, "Temporary Redirect", Body);
+            var Headers = new List<string>(GetHeaders(Body))
+            {
+                $"Location: {NewURL}"
+            };
+            return SendHTTP(Client, 307, "Temporary Redirect", Headers, Body);
+        }
+
+        /// <summary>
         /// HTTP 502
         /// </summary>
         /// <param name="Client">Socket</param>

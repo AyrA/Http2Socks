@@ -27,7 +27,13 @@ namespace H2S
         /// </remarks>
         public const int DEFAULT_TIMEOUT = 5000;
 
+        /// <summary>
+        /// Directory that holds the main executable
+        /// </summary>
         public static readonly string AppDirectory;
+        /// <summary>
+        /// File path to configuration file
+        /// </summary>
         public static readonly string ConfigFile;
 
         static Tools()
@@ -299,9 +305,62 @@ namespace H2S
                 throw new ArgumentNullException(nameof(Entries));
             }
             var C = new Configuration();
-            foreach (var E in Entries)
+            lock (Entries)
             {
-                E.Save(C);
+                foreach (var E in Entries)
+                {
+                    E.Save(C);
+                }
+            }
+            return C;
+        }
+
+        /// <summary>
+        /// Loads aliases from file
+        /// </summary>
+        /// <param name="FileName">INI file</param>
+        /// <returns>Alias list</returns>
+        public static AliasEntry[] GetAliasEntries(string FileName)
+        {
+            if (string.IsNullOrWhiteSpace(FileName))
+            {
+                throw new ArgumentException($"'{nameof(FileName)}' cannot be null or whitespace.", nameof(FileName));
+            }
+
+            var C = new Configuration(FileName);
+            var Aliases = C.List().Select(m => AliasEntry.FromConfig(C, m)).ToArray();
+            for(var i = 0; i < Aliases.Length; i++)
+            {
+                if(Aliases.Count(m => m.Onion == Aliases[i].Onion) > 1)
+                {
+                    throw new Exception($"Duplicate onion found: {Aliases[1].Onion}");
+                }
+                if (Aliases.Count(m => m.Alias == Aliases[i].Alias) > 1)
+                {
+                    throw new Exception($"Duplicate alias found: {Aliases[1].Onion}");
+                }
+            }
+            return Aliases;
+        }
+
+        /// <summary>
+        /// Saves aliases to INI
+        /// </summary>
+        /// <param name="Entries">Alias entries</param>
+        /// <returns>INI</returns>
+        public static Configuration SaveAliasEntries(IEnumerable<AliasEntry> Entries)
+        {
+            if (Entries is null)
+            {
+                throw new ArgumentNullException(nameof(Entries));
+            }
+            var C = new Configuration();
+            lock (Entries)
+            {
+                foreach (var E in Entries)
+                {
+                    E.Save(C);
+                }
             }
             return C;
         }

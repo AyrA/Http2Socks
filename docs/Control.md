@@ -4,6 +4,10 @@ The control connection is a simple line based protocol that allows control of th
 
 `H2S.php` in the PHP folder implements all commands.
 
+## Terms in this document
+
+This document uses "long.onion" as a way to express a full v3 onion address.
+
 ## Version
 
 Obtainable via: `VERSION` command.
@@ -117,7 +121,7 @@ Note: This is the contents from memory and not the file on disk. The actual file
 - Action: Adds or updates the given line to the memory pool of blackisted onion services
 - Response: Success if the line was added sucessfully
 - Authentication: Yes
-- Example: `BLADD example.onion Evil+Services  451 https://reason.example.com/reason/for/451`
+- Example: `BLADD long.onion Evil+Services  451 https://reason.example.com/reason/for/451`
 
 Defaults:
 
@@ -138,7 +142,7 @@ Note: This command replaces any existing blacklist entry for the given domain in
 - Action: Removes the given onion service from memory
 - Response: Success if service was found and removed
 - Authentication: Yes
-- Example: `BLREMOVE example.onion`
+- Example: `BLREMOVE long.onion`
 
 Note: Entries are not deleted from the file immediately. See `BLSAVE` for how to do this.
 
@@ -153,3 +157,70 @@ Note: Entries are not deleted from the file immediately. See `BLSAVE` for how to
 This will save all entries in memory to the blacklist file.
 Note that this will discard any comments present in the file previously.
 For this command to work, "Blacklist" must be configured in the DNS section.
+
+## Command `ALRELOAD`
+
+- Arguments: None
+- Action: Reloads the alias file from disk
+- Response: Success if the file was reloaded. Error if the file could not be found/read
+- Authentication: Yes
+- Example: `ALRELOAD`
+
+This command guarantees that memory will not corrupt or be wiped.
+Only when the file was successfully read and parsed will the alias list in memory update.
+
+Note: Clears the list in memory if no alias file is configured.
+
+## Command `ALLIST`
+
+- Arguments: None
+- Action: Lists the contents of the alias list from memory
+- Response: Always success
+- Authentication: Yes
+- Example: `ALLIST`
+
+The response is in INI format (see format of alias file)
+
+Note: This is the contents from memory and not the file on disk. The actual file will not be read.
+
+## Command `ALADD`
+
+- Arguments: `<domain> <alias> [type]`
+- Action: Adds or updates the given line to the memory pool of aliased onion services
+- Response: Success if the line was added sucessfully
+- Authentication: Yes
+- Example: `ALADD long.onion alias.onion 1`
+
+Defaults:
+
+- type: 0
+
+For a list of valid types, check the alias chapter.
+
+Note: Entries are not saved to file immediately. See `ALSAVE` for how to do this.
+
+Note: This command replaces any existing alias entry for the given domain in memory
+
+Note: A domain can only have a single alias
+
+## Command `ALREMOVE`
+
+- Arguments: onion domain
+- Action: Removes the given onion service from memory
+- Response: Success if service was found and removed
+- Authentication: Yes
+- Example: `ALREMOVE long.onion`
+
+Note: Entries are not deleted from the file immediately. See `ALSAVE` for how to do this.
+
+## Command `ALSAVE`
+
+- Arguments: None
+- Action: Saves the alias list in memory to the alias file
+- Response: Success if file could be written
+- Authentication: Yes
+- Example: `ALSAVE`
+
+This will save all entries in memory to the alias file.
+Note that this will discard any comments present in the file previously.
+For this command to work, "Alias" must be configured in the DNS section.
