@@ -90,6 +90,54 @@ Note: No special treatment needed for passwords that contain spaces. The command
 The version is a simple integer that specifies the API version.
 An application must accept multiple numbers on the same line to support future extensions to the protocol.
 
+## Command `INFO`
+
+- Arguments: None
+- Action: Responds with process status
+- Response: Always success
+- Authentication: Ignored
+- Example: `INFO`
+
+Process status is provided in the form of `Name=Value` pairs.
+Booleans are represented using `1` and `0` for `true` and `false`.
+
+Known keys:
+
+- AUTH: true, if authenticated
+- HALT: true, if HTTP processing is halted
+- AL: Number of alias entries
+- BL: Number of blacklist entries
+- ALFILE: true, if alias file is specified (and thus, `ALSAVE` will work)
+- BLFILE: true, if blacklist file is specified (and thus, `BLSAVE` will work)
+
+Note: Except for "AUTH", keys are only shown when authenticated
+
+## Command `HALT`
+
+- Arguments: None
+- Action: Halts HTTP processing
+- Response: Always success
+- Authentication: Yes
+- Example: `HALT`
+
+This halts all HTTP processing at the point where the alias list or blacklist is used in the request pipeline.
+This means that completely invalid requests are still processed.
+
+This command is best used for when modifications to the alias or blacklist are made and no requests should fail because of the short time frame where entries may be missing from the list.
+
+Note: Connections are still accepted and will "pile up" until `CONT` is issued.
+To halt processing more efficiently, the service should be paused or stopped if the control connection is not needed.
+
+## Command `CONT`
+
+- Arguments: None
+- Action: Continues HTTP processing
+- Response: Always success
+- Authentication: Yes
+- Example: `CONT`
+
+Continues HTTP request processing that was previously stopped using `HALT`
+
 ## Command `BLRELOAD`
 
 - Arguments: None

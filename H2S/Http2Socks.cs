@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.ServiceProcess;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace H2S
 {
@@ -20,6 +21,15 @@ namespace H2S
         /// Control connection
         /// </summary>
         private ControlPort Control;
+
+        /// <summary>
+        /// If set to true, all HTTP connections is temporary stalled
+        /// </summary>
+        /// <remarks>
+        /// This can be used by the control connection to update lists with multiple commands
+        /// without any requests falling through.
+        /// </remarks>
+        private volatile bool Halt;
 
         /// <summary>
         /// Holds the password stored in the cookie file
@@ -50,6 +60,7 @@ namespace H2S
             InitializeComponent();
             Blacklist = new List<BlacklistEntry>();
             Aliases = new List<AliasEntry>();
+            Halt = false;
         }
 
         /// <summary>
@@ -138,6 +149,7 @@ namespace H2S
                         throw;
                     }
                 }
+                Halt = false;
             }
         }
 
@@ -212,6 +224,26 @@ namespace H2S
             Tools.Log(nameof(Http2Socks), $"Control command: {Args.Command}");
             switch (Args.Command)
             {
+                case "INFO":
+                    Args.Response = GetInfo(Args.IsAuthenticated);
+                    Args.IsSuccess = true;
+                    break;
+                case "HALT":
+                    if (Args.IsAuthenticated)
+                    {
+                        Args.Response = Halt ? "HTTP processing already stopped" : "HTTP processing halted";
+                        Halt = true;
+                        Args.IsSuccess = true;
+                    }
+                    break;
+                case "CONT":
+                    if (Args.IsAuthenticated)
+                    {
+                        Args.Response = Halt ? "HTTP processing continued" : "HTTP processing was not stopped";
+                        Halt = false;
+                        Args.IsSuccess = true;
+                    }
+                    break;
                 case "ALLIST":
                 case "ALRELOAD":
                 case "ALADD":
@@ -227,6 +259,29 @@ namespace H2S
                     HandleBLCommands(Args);
                     break;
             }
+        }
+
+        /// <summary>
+        /// Constructs a response for the INFO command
+        /// </summary>
+        /// <param name="isAuth">true, if command made while authenticated</param>
+        /// <returns>Command response</returns>
+        private string GetInfo(bool isAuth)
+        {
+            //Converts boolean into true=1 or false=0
+            var B = new Func<bool, int>(delegate (bool x) { return x ? 1 : 0; });
+
+            var SB = new StringBuilder();
+            SB.AppendLine($"AUTH={B(isAuth)}");
+            if (isAuth)
+            {
+                SB.AppendLine($"HALT={B(Halt)}");
+                SB.AppendLine($"BL={Blacklist.Count}");
+                SB.AppendLine($"AL={Aliases.Count}");
+                SB.AppendLine($"BLFILE={B(!string.IsNullOrWhiteSpace(C.Dns.Blacklist))}");
+                SB.AppendLine($"ALFILE={B(!string.IsNullOrWhiteSpace(C.Dns.Alias))}");
+            }
+            return SB.ToString().Trim();
         }
 
         /// <summary>
@@ -567,6 +622,11 @@ namespace H2S
                 HttpActions.BadRequest(Args.Client, $"Invalid 'Host' header format");
                 Args.Client.Dispose();
                 return;
+            }
+
+            while (Halt)
+            {
+                Thread.Sleep(100);
             }
 
             string Host = null;
