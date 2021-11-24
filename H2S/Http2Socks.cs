@@ -173,7 +173,7 @@ namespace H2S
             }
             catch (Exception ex)
             {
-                Tools.LogEx("Failed to reload blacklist", ex);
+                Tools.LogEx("Failed to reload alias list", ex);
                 return false;
             }
         }
