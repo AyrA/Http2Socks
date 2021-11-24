@@ -221,14 +221,23 @@ namespace H2S
         /// <returns>Normalized name. null if not an onion or otherwise malformed</returns>
         public static string NormalizeOnion(string Domain)
         {
-            if (string.IsNullOrEmpty(Domain))
+            if (string.IsNullOrEmpty(Domain) || Uri.CheckHostName(Domain) != UriHostNameType.Dns)
             {
                 return null;
             }
-            var M = Domain.Match(@"^(?:.*\.)?([a-z2-7]{56})(?:\.onion)?$", RegexOptions.IgnoreCase);
+
+            //Try to match with .onion first.
+            var M = Domain.Match(@"^(?:.*\.)?([a-z2-7]+)\.onion$", RegexOptions.IgnoreCase);
+            if (M == null)
+            {
+                M = Domain.Match(@"^(?:.*\.)?([a-z2-7]{16}(?:[a-z2-7]{40})?)$", RegexOptions.IgnoreCase);
+            }
             if (M != null)
             {
-                return M[1].ToLower() + ".onion";
+                if (M[1].Length == 16 || M[1].Length == 56)
+                {
+                    return M[1].ToLower() + ".onion";
+                }
             }
             return null;
         }
@@ -238,14 +247,69 @@ namespace H2S
         /// The .onion is optional, and the domain may contain subdomains
         /// </summary>
         /// <param name="Domain">Domain name</param>
-        /// <returns>true, if V2.</returns>
+        /// <returns>true, if V2</returns>
+        /// <remarks>Accepts subdomains</remarks>
         public static bool IsV2Onion(string Domain)
         {
-            if (Domain is null)
+            if (string.IsNullOrWhiteSpace(Domain))
             {
-                throw new ArgumentNullException(nameof(Domain));
+                return false;
             }
-            return Domain.IsMatch(@"^(?:.*\.)?([a-z2-7]{16})(?:\.onion)?$", RegexOptions.IgnoreCase);
+            return
+                Uri.CheckHostName(Domain) == UriHostNameType.Dns &&
+                Domain.IsMatch(@"^(?:.*\.)?([a-z2-7]{16})(?:\.onion)?$", RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>
+        /// Checks if the given domain is a V3 onion which is the only supported version as of now
+        /// </summary>
+        /// <param name="Domain">Domain name</param>
+        /// <returns>true, if V3</returns>
+        /// <remarks>Accepts subdomains</remarks>
+        public static bool IsV3Onion(string Domain)
+        {
+            if (string.IsNullOrWhiteSpace(Domain))
+            {
+                return false;
+            }
+            return
+                Uri.CheckHostName(Domain) == UriHostNameType.Dns &&
+                Domain.IsMatch(@"^(?:.*\.)?([a-z2-7]{56})(?:\.onion)?$", RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>
+        /// Tests if the supplied value is a valid .onion alias
+        /// </summary>
+        /// <param name="Alias">Alias</param>
+        /// <returns>true, if valid alias</returns>
+        public static bool IsAlias(string Alias)
+        {
+            if (Alias is null)
+            {
+                throw new ArgumentNullException(nameof(Alias));
+            }
+
+            return ParseAlias(Alias) != null;
+        }
+
+        /// <summary>
+        /// Parses an Aliased domain (Removes subdomain and .onion)
+        /// </summary>
+        /// <param name="Alias">Alias</param>
+        /// <returns>Parsed alias, or null if not a valid alias</returns>
+        public static string ParseAlias(string Alias)
+        {
+            if (Alias is null)
+            {
+                throw new ArgumentNullException(nameof(Alias));
+            }
+
+            if (Uri.CheckHostName(Alias) == UriHostNameType.Dns)
+            {
+                var M = Alias.Match(@"^([^.]+)(?:\.onion)?$", RegexOptions.IgnoreCase);
+                return M?[1].ToLower();
+            }
+            return null;
         }
 
         /// <summary>
@@ -329,7 +393,7 @@ namespace H2S
 
             var C = new Configuration(FileName);
             var Aliases = C.List().Select(m => AliasEntry.FromConfig(C, m)).ToArray();
-            for(var i = 0; i < Aliases.Length; i++)
+            for (var i = 0; i < Aliases.Length; i++)
             {
                 if (Aliases.Count(m => m.Alias == Aliases[i].Alias) > 1)
                 {

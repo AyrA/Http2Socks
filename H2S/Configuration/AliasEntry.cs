@@ -8,11 +8,6 @@ namespace H2S
     public class AliasEntry : IValidateable
     {
         /// <summary>
-        /// Allowed mask for alias (without .onion)
-        /// </summary>
-        public const string AliasMask = @"^[\-\w]+$";
-
-        /// <summary>
         /// Alias of onion
         /// </summary>
         public string Alias { get; set; }
@@ -34,25 +29,22 @@ namespace H2S
             {
                 throw new ValidationException("AliasEntry.Alias is empty");
             }
-            Alias = Alias.ToLower();
-            //Cut off .onion if it was there
-            if (Alias.IsMatch(@"\.onion$"))
-            {
-                Alias = Alias.Substring(0, Alias.Length - 6);
-            }
-            if (!Alias.IsMatch(AliasMask) || Alias.Contains("--") || Alias.StartsWith("-") || Alias.Contains("."))
+
+            if (!Tools.IsAlias(Alias))
             {
                 throw new ValidationException("AliasEntry.Alias not a valid domain label");
             }
-            if (string.IsNullOrEmpty(Onion) || Tools.NormalizeOnion(Onion) == null)
+            if (!Tools.IsV3Onion(Onion))
             {
                 throw new ValidationException("AliasEntry.Onion is not a valid V3 onion");
             }
-            Onion = Tools.NormalizeOnion(Onion);
             if (!Enum.IsDefined(Type.GetType(), Type))
             {
                 throw new ValidationException("AliasEntry.Type is not a valid selection of AliasType");
             }
+            //All validation passed. Normalize values now
+            Onion = Tools.NormalizeOnion(Onion);
+            Alias = Tools.ParseAlias(Alias);
         }
 
         /// <summary>
@@ -65,7 +57,7 @@ namespace H2S
             Onion = Tools.NormalizeOnion(Onion);
             C.Empty(Alias);
             C.Set(Alias, "Onion", Onion);
-            C.Set(Alias, "Type", (int)Type);
+            C.Set(Alias, "Type", Type);
         }
 
         /// <summary>
@@ -83,7 +75,7 @@ namespace H2S
 
             var AE = new AliasEntry()
             {
-                Onion = Tools.NormalizeOnion(C.Get(SectionName, "Onion")),
+                Onion = C.Get(SectionName, "Onion"),
                 Alias = SectionName,
                 Type = C.GetEnum(SectionName, "Type", AliasType.Rewrite),
             };

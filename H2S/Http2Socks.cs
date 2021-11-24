@@ -334,7 +334,7 @@ namespace H2S
                             {
                                 A = new AliasEntry
                                 {
-                                    Onion = Tools.NormalizeOnion(Args.Arguments[0]),
+                                    Onion = Args.Arguments[0],
                                     Alias = Args.Arguments[1],
                                     Type = Args.Arguments.Length > 2 ? (AliasType)int.Parse(Args.Arguments[2]) : AliasType.Rewrite
                                 };
@@ -368,18 +368,19 @@ namespace H2S
                     {
                         if (Args.Arguments.Length >= 1)
                         {
-                            var Onion = Tools.NormalizeOnion(Args.Arguments[0]);
-                            if (Onion != null)
+                            var Alias = Args.Arguments[0];
+                            if (Tools.IsAlias(Alias))
                             {
                                 lock (Aliases)
                                 {
-                                    Aliases.RemoveAll(m => m.Onion == Onion);
+                                    int Count = Aliases.RemoveAll(m => m.Alias == Alias);
+                                    Args.Response = $"Removed {Count} entries";
                                 }
                                 Args.IsSuccess = true;
                             }
                             else
                             {
-                                Args.Response = "Invalid onion domain";
+                                Args.Response = "Invalid alias domain";
                             }
                         }
                         else
@@ -496,7 +497,8 @@ namespace H2S
                             var Onion = Tools.NormalizeOnion(Args.Arguments[0]);
                             if (Onion != null)
                             {
-                                Blacklist.RemoveAll(m => m.Domain == Onion);
+                                var Count = Blacklist.RemoveAll(m => m.Domain == Onion);
+                                Args.Response = $"Removed {Count} entries";
                                 Args.IsSuccess = true;
                             }
                             else

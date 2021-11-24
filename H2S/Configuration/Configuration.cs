@@ -164,7 +164,7 @@ namespace H2S
             {
                 try
                 {
-                    return (T)Enum.Parse(typeof(T), Value);
+                    return (T)Enum.Parse(typeof(T), Value, true);
                 }
                 catch
                 {

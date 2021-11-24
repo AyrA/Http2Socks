@@ -89,7 +89,7 @@ namespace H2S
             {
                 C.Set(Domain, "Notes", InternalNotes);
             }
-            C.Set(Domain, "Reason", (int)Type);
+            C.Set(Domain, "Reason", Type);
             if (URL != null)
             {
                 C.Set(Domain, "URL", URL);
