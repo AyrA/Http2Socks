@@ -350,7 +350,7 @@ namespace H2S
                                 Tools.Log(nameof(Http2Socks), $"Alias added for {A.Onion} --> {A.Alias}");
                                 lock (Aliases)
                                 {
-                                    Aliases.RemoveAll(m => m.Onion == A.Onion || m.Alias == A.Alias);
+                                    Aliases.RemoveAll(m => m.Alias == A.Alias);
                                     Aliases.Add(A);
                                 }
                                 Args.IsSuccess = true;
