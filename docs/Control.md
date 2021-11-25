@@ -128,6 +128,10 @@ This command is best used for when modifications to the alias or blacklist are m
 Note: Connections are still accepted and will "pile up" until `CONT` is issued.
 To halt processing more efficiently, the service should be paused or stopped if the control connection is not needed.
 
+**CAUTION! Request processing does not automatically resume when you close/drop the control connection.**
+**If there's a processing error, connect again and issue the CONT command to resume processing.**
+**Restarting the service also resets the HALT flag.**
+
 ## Command `CONT`
 
 - Arguments: None
