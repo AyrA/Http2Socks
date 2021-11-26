@@ -19,7 +19,7 @@
 	}
 
 	//Commands have been split into categories to stop this file from growing too much
-	foreach(glob('H2S.*.php') as $inc){
+	foreach(glob(__DIR__ . '/H2S.*.php') as $inc){
 		require($inc);
 	}
 
