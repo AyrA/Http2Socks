@@ -112,3 +112,20 @@ The string in the file is guaranteed to be ASCII compatible.
 The file is never read by the service.
 You can at any point delete it if you want to stop other applications from accessing the service.
 The only way to re-create the file is to restart the service.
+
+## Section `Security`
+
+Contains security relevant settings
+
+### Setting `NonAnonymousHeaders`
+
+A list of request headers considered dangerous to user anonymity.
+This is a comma separated list of lowercase strings with HTTP header names.
+If a request contains any header contained in the list,
+the request will be rejected.
+A message will be shown with the offending headers and associated values.
+If the value is empty, no header checking will be performed.
+
+Note: It's usually better to configure your reverse proxy to simply remove these headers.
+
+Default: `x-forwarded-for,x-forwarded-ip,x-forwarded-host,cf-connecting-ip,cf-ipcountry`
