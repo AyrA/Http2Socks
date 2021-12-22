@@ -667,12 +667,15 @@ namespace H2S
                 if (Tools.IsV2Onion(M[1]))
                 {
                     Tools.Log(nameof(Http2Socks), $"Rejected host (outdated V2 onion): {M[1]}");
-                    HttpActions.Gone(Args.Client, $"{HttpActions.HtmlEncode(M[1])} is a version 2 onion name which is no longer supported by Tor.");
+                    HttpActions.Gone(Args.Client, $"{HttpActions.HtmlEncode(M[1])} is a version 2 onion name which is no longer supported by Tor.<br />" +
+                        $"You can try to reach out to the owner to get a V3 onion, " +
+                        $"or you can try to search for it using a search engine.");
                 }
                 else
                 {
                     Tools.Log(nameof(Http2Socks), $"Rejected host (onion format error): {HostHeader[0]}");
-                    HttpActions.BadRequest(Args.Client, "This service can only be used to access onion websites.");
+                    HttpActions.BadRequest(Args.Client, $"The domain {HttpActions.HtmlEncode(HostHeader[0])} is not a valid onion name and also not a registered alias.<br />" +
+                        $"Check the spelling and try again");
                 }
                 Args.Client.Dispose();
                 return;
@@ -693,7 +696,8 @@ namespace H2S
                 if (!int.TryParse(M[2].Substring(1), out Port))
                 {
                     Tools.Log(nameof(Http2Socks), $"Rejected host (invalid port): {HostHeader[0]}");
-                    HttpActions.BadRequest(Args.Client, "Invalid \"Host\" header format");
+                    HttpActions.BadRequest(Args.Client, $"Invalid \"Host\" header format. " +
+                        $"This usually indicates a problem with your browser.");
                     Args.Client.Dispose();
                     return;
                 }
@@ -716,7 +720,11 @@ namespace H2S
             }
             catch (Exception ex)
             {
-                HttpActions.ServiceUnavailable(Args.Client, $"<p>Cannot connect to the destination. Details: {HttpActions.HtmlEncode(ex.Message)}</p>");
+                HttpActions.ServiceUnavailable(Args.Client, $"Cannot connect to the destination. Details: {HttpActions.HtmlEncode(ex.Message)}.<br />" +
+                    $"This usually means that Tor cannot find your requested hidden service.<br />" +
+                    $"Please check if the onion domain was spelled correctly. " +
+                    $"It's also possible that the machine that provides this hidden service is currently unavailable, " +
+                    $"or this hidden service has been discontinued.");
                 Args.Client.Dispose();
                 Tools.LogEx("SOCKS failed", ex);
                 return;
