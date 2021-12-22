@@ -17,7 +17,7 @@ Replace the IP and Port in the `ProxyPass` line with the IP and port if you chan
 	ServerName onion.example.com
 	ServerAlias *.onion.example.com
 	DocumentRoot "${SRVROOT}/htdocs/null"
-	#Redirect all connections to the HTTPS version.
+	#Redirect all connections to the HTTPS version except for ACME certificate validation.
 	RewriteEngine On
 	RewriteCond %{REQUEST_URI} !^/\.well\-known/acme\-challenge/
 	RewriteRule ^(.*)$ https://%{HTTP_HOST}$1 [R=301,L]
@@ -33,7 +33,20 @@ Replace the IP and Port in the `ProxyPass` line with the IP and port if you chan
 	SetEnv proxy-nokeepalive 1
 	ProxyPass "/" "http://127.0.0.1:12243/"
 	ProxyPreserveHost On
+	ProxyAddHeaders Off
 	ProxyTimeout 60
+
+	#Set some headers to Tor browser defaults
+	RequestHeader set User-Agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
+	RequestHeader set Accept-Language "en-US,en;q=0.5"
+
+	#Remove headers that may contain the user IP, hostname, or country
+	RequestHeader unset X-Forwarded-For
+	RequestHeader unset X-Forwarded-Host
+	RequestHeader unset X-Forwarded-Ip
+	RequestHeader unset CF-Connecting-Ip
+	RequestHeader unset CF-Ipcountry
+
 	# Can use any directory here. It's never accessed
 	DocumentRoot "${SRVROOT}/htdocs/null"
 	# Support Websockets
@@ -42,7 +55,7 @@ Replace the IP and Port in the `ProxyPass` line with the IP and port if you chan
 		RewriteCond %{HTTP:Upgrade} websocket [NC]
 		RewriteCond %{HTTP:Connection} upgrade [NC]
 		RewriteRule ^/?(.*) "ws://127.0.0.1:12243/$1" [P,L]
-	<!IfModule>
+	</IfModule>
 </VirtualHost>
 ```
 
