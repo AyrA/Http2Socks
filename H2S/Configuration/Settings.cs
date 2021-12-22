@@ -124,6 +124,85 @@ namespace H2S
         }
 
         /// <summary>
+        /// Security related settings
+        /// </summary>
+        public class SecuritySettings : IValidateable
+        {
+            /// <summary>
+            /// Default header set for which to reject clients.
+            /// Contains headers that usually contain visitor IP/host and/or country information
+            /// </summary>
+            public const string DEFAULT_REJECTED = "x-forwarded-for,x-forwarded-ip,x-forwarded-host,cf-connecting-ip,cf-ipcountry";
+
+            private string[] nonAnonymous;
+
+            /// <summary>
+            /// Gets list of headers that cause a request to be rejected.
+            /// </summary>
+            public string NonAnonymousHeaders
+            {
+                get
+                {
+                    return nonAnonymous == null ? null : string.Join(",", nonAnonymous);
+                }
+                set
+                {
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        nonAnonymous = null;
+                    }
+                    else
+                    {
+                        nonAnonymous = value
+                            .Split(',')
+                            .Select(v => v.Trim().ToLower())
+                            .Where(m => !string.IsNullOrWhiteSpace(m))
+                            .Distinct()
+                            .ToArray();
+                    }
+                }
+            }
+
+            public bool ContainsRejectedHeaders(string[] HeaderList)
+            {
+                return HeaderList.Any(IsRejected);
+            }
+
+            public bool IsRejected(string Header)
+            {
+                //Do not validate if param is empty or no headers are rejected
+                if (string.IsNullOrEmpty(Header) || nonAnonymous == null)
+                {
+                    return false;
+                }
+                return nonAnonymous.Contains(Header.Trim().ToLower());
+            }
+
+            /// <summary>
+            /// Validates this instance
+            /// </summary>
+            public void Validate()
+            {
+                //There is currently no validation. The header list can be any string
+            }
+
+            /// <summary>
+            /// Saves this instance to INI
+            /// </summary>
+            /// <param name="c">INI</param>
+            public void Save(Configuration c)
+            {
+                if (c is null)
+                {
+                    throw new ArgumentNullException(nameof(c));
+                }
+                Validate();
+                c.Empty("Security");
+                c.Set("Security", "NonAnonymousHeaders", NonAnonymousHeaders);
+            }
+        }
+
+        /// <summary>
         /// Tor specific settings
         /// </summary>
         public class TorSettings : IValidateable
@@ -377,6 +456,11 @@ namespace H2S
         public ControlSettings Control { get; private set; }
 
         /// <summary>
+        /// Security settings
+        /// </summary>
+        public SecuritySettings Security { get; private set; }
+
+        /// <summary>
         /// Creates an instance with default settings
         /// </summary>
         public Settings()
@@ -404,6 +488,10 @@ namespace H2S
                 Port = 12244,
                 CookieFile = Path.Combine(Tools.AppDirectory, "cookie.txt"),
             };
+            Security = new SecuritySettings()
+            {
+                NonAnonymousHeaders = SecuritySettings.DEFAULT_REJECTED
+            };
         }
 
         /// <summary>
@@ -420,6 +508,7 @@ namespace H2S
             Http = new HttpSettings();
             Tor = new TorSettings();
             Control = new ControlSettings();
+            Security = new SecuritySettings();
 
             #region DNS
             if (!string.IsNullOrEmpty(C.Get("DNS", "Suffix")))
@@ -509,6 +598,13 @@ namespace H2S
 
             #endregion
 
+            #region SECURITY
+            if (C.List().Contains("Security"))
+            {
+                Security.NonAnonymousHeaders = C.Get("Security", "NonAnonymousHeaders", SecuritySettings.DEFAULT_REJECTED);
+            }
+            #endregion
+
             Validate();
         }
 
@@ -536,6 +632,7 @@ namespace H2S
             Dns.Save(C);
             Http.Save(C);
             Tor.Save(C);
+            Security.Save(C);
             return C;
         }
 
@@ -549,6 +646,7 @@ namespace H2S
             Dns.Validate();
             Http.Validate();
             Tor.Validate();
+            Security.Validate();
         }
     }
 }
