@@ -757,7 +757,7 @@ namespace H2S
             }
 
             Tools.Log(nameof(Http2Socks), $"Rejecting request to {e.Domain}");
-
+            //Construct error message that uses the name if possible and tells the block reason
             var DisplayName = string.IsNullOrEmpty(e.Name) ? e.Domain : $"\"{e.Name}\" ({e.Domain})";
             var Who = e.Type == BlacklistType.Forbidden ? "The owner of this service" : "A legal entity";
             var SB = new StringBuilder($"<p>{Who} has blocked access to {HttpActions.HtmlEncode(DisplayName)}.</p>");
@@ -771,7 +771,7 @@ namespace H2S
             {
                 SB.Append("<p>The operator of this Http2Socks instance did not provide a reason for this decision</p>");
             }
-            SB.Append("<p><hr /><br />You can always access onion services safely and anonymously with the Tor browser.</p>");
+            SB.Append("<p><hr /><br />You can always access onion services anonymously with the Tor browser.</p>");
             switch (e.Type)
             {
                 case BlacklistType.UFLR:
